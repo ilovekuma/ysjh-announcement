@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    height: 100%;
+    min-height: 100vh;
+  }
+
+  body {
+    font-family: 'Noto Sans TC', system-ui, sans-serif;
+    background-color: #f0f4ff;
+    color: #1B3A6B;
+  }
+}
+
+/* Quill editor overrides for admin panel */
+.ql-toolbar.ql-snow {
+  border-radius: 6px 6px 0 0;
+  border-color: #2D5DA6 !important;
+  background: #f8faff;
+}
+
+.ql-container.ql-snow {
+  border-radius: 0 0 6px 6px;
+  border-color: #2D5DA6 !important;
+  min-height: 180px;
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 15px;
+}
+
+.ql-editor {
+  min-height: 160px;
+  line-height: 1.8;
+}
+
+/* ================================================================
+   Quill content display (read-only, in carousel / overview)
+   Tailwind preflight 將所有 h1-h6 的 font-size / font-weight 重置為
+   inherit，導致標題在卡片中與一般文字無異。
+   以下規則對應 Quill Snow 在 .ql-editor 內的預設樣式。
+   ================================================================ */
+
+/* 標題大小（對應 Quill header format） */
+.announcement-content h1 {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 0.4em;
+}
+.announcement-content h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 0.4em;
+}
+.announcement-content h3 {
+  font-size: 1.17em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 0.4em;
+}
+
+/* 段落 */
+.announcement-content p {
+  margin-bottom: 0.5em;
+  line-height: 1.8;
+}
+
+/* 粗體 / 斜體 / 底線 / 刪除線（Tailwind preflight 不全部重置，但補上保險） */
+.announcement-content strong,
+.announcement-content b {
+  font-weight: 700;
+}
+.announcement-content em,
+.announcement-content i {
+  font-style: italic;
+}
+.announcement-content u {
+  text-decoration: underline;
+}
+.announcement-content s {
+  text-decoration: line-through;
+}
+
+/* 清單 */
+.announcement-content ul,
+.announcement-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.8;
+}
+.announcement-content ul {
+  list-style-type: disc;
+}
+.announcement-content ol {
+  list-style-type: decimal;
+}
+
+/* 圖片 */
+.announcement-content img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+/* 連結 */
+.announcement-content a {
+  color: #2D5DA6;
+  text-decoration: underline;
+}
+
+/* Pixel monster animation container */
+.pixel-track {
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* 像素小怪物動畫 keyframes
+   Tailwind JIT 只掃 className，inline style 的 animation 名稱不會觸發 keyframe 輸出，
+   因此直接定義在 CSS 中確保永遠生效。 */
+@keyframes walkRight {
+  0%   { transform: translateX(-80px) translateY(-50%); }
+  100% { transform: translateX(calc(100vw + 80px)) translateY(-50%); }
+}
+
+@keyframes walkLeft {
+  0%   { transform: translateX(calc(100vw + 80px)) translateY(-50%) scaleX(-1); }
+  100% { transform: translateX(-80px) translateY(-50%) scaleX(-1); }
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #e8eef8;
+}
+::-webkit-scrollbar-thumb {
+  background: #2D5DA6;
+  border-radius: 3px;
+}
