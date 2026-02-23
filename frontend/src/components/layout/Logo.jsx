@@ -14,7 +14,7 @@ export default function Logo({ onClick }) {
                  focus:outline-none focus:ring-2 focus:ring-white/50 bg-white"
     >
       <img
-        src="/logo.jpg"
+        src={`${import.meta.env.BASE_URL}logo.jpg`}
         alt="新竹市立育賢國民中學校徽"
         className="w-full h-full object-cover"
         draggable="false"
