@@ -143,7 +143,7 @@ export default function RichTextEditor({ value, onChange }) {
 
   return (
     <div className="relative">
-      {/* 行高選擇器 */}
+      {/* 行高選擇器 + Emoji 連結 */}
       <div className="flex items-center gap-2 mb-1">
         <span className="text-xs text-gray-500">行高</span>
         <div className="flex gap-1">
@@ -162,6 +162,19 @@ export default function RichTextEditor({ value, onChange }) {
             </button>
           ))}
         </div>
+
+        {/* 間隔 + Emoji 查詢按鈕 */}
+        <a
+          href="https://getemoji.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-4 flex items-center gap-1 text-xs px-2 py-0.5 rounded border
+                     border-gray-300 text-gray-600 bg-white hover:border-school-blue
+                     hover:text-school-blue transition-colors"
+          title="前往 Emoji 查詢頁面"
+        >
+          😊 Emoji
+        </a>
       </div>
 
       <div className="quill-wrapper rounded-lg overflow-hidden border border-school-blue/30">
