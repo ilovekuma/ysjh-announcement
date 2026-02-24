@@ -51,6 +51,16 @@ export const updateAnnouncement = (id, data) =>
 export const deleteAnnouncement = (id) =>
   gasPost({ action: 'delete', id });
 
+/**
+ * 上傳圖片至 Google Drive
+ * @param {string} base64   - base64 字串（不含 data:... 前綴）
+ * @param {string} mimeType - e.g. 'image/jpeg'
+ * @param {string} fileName - 原始檔名
+ * @returns {{ success: boolean, url: string }}
+ */
+export const uploadImage = (base64, mimeType, fileName) =>
+  gasPost({ action: 'uploadImage', base64, mimeType, fileName });
+
 // ─── Mock fallback（未設定 GAS URL 時的假資料） ─────────────────
 
 export const MOCK_ANNOUNCEMENTS = [
