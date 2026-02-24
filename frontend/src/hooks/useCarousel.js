@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const AUTO_INTERVAL_MS = 15000; // 15 秒換頁
+const AUTO_INTERVAL_MS = 10000; // 10 秒換頁
 const DRAG_THRESHOLD   = 40;    // px，垂直拖曳閾值
 
 /**

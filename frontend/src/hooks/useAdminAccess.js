@@ -1,10 +1,10 @@
 import { useRef, useState, useCallback } from 'react';
 
-const CLICK_COUNT = 3;
-const WINDOW_MS   = 3000;
+const CLICK_COUNT = 2;
+const WINDOW_MS   = 2000;
 
 /**
- * 三連點偵測：CLICK_COUNT 次點擊在 WINDOW_MS 毫秒內 → 開啟管理後台
+ * 雙連點偵測：CLICK_COUNT 次點擊在 WINDOW_MS 毫秒內 → 開啟管理後台
  */
 export function useAdminAccess() {
   const [adminOpen, setAdminOpen] = useState(false);
