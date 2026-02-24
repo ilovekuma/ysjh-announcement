@@ -11,9 +11,16 @@ export default function App() {
   const announcementsHook = useAnnouncements();
   const { announcements, allAnnouncements, loading, useMock } = announcementsHook;
 
-  const { adminOpen, handleLogoClick, openAdmin, closeAdmin } = useAdminAccess();
+  const { adminOpen, handleLogoClick: _handleLogoClick, openAdmin, closeAdmin } = useAdminAccess();
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [pendingEdit, setPendingEdit] = useState(null);
+  const [adminOpenKey, setAdminOpenKey] = useState(0);
+
+  // Logo 點擊：開啟後台，同時遞增 key 讓 AdminPanel 重置表單
+  const handleLogoClick = () => {
+    _handleLogoClick();
+    setAdminOpenKey(k => k + 1);
+  };
 
   const handleCardDoubleClick = (ann) => {
     setPendingEdit(ann);
@@ -78,6 +85,7 @@ export default function App() {
         loading={loading}
         initialEdit={pendingEdit}
         onInitialEditConsumed={() => setPendingEdit(null)}
+        openKey={adminOpenKey}
       />
     </div>
   );

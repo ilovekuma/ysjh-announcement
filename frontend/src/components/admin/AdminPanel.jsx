@@ -6,7 +6,7 @@ import AnnouncementTable from './AnnouncementTable';
 /**
  * AdminPanel — 管理後台 overlay
  */
-export default function AdminPanel({ open, onClose, announcements, allAnnouncements, hooks, loading, initialEdit, onInitialEditConsumed }) {
+export default function AdminPanel({ open, onClose, announcements, allAnnouncements, hooks, loading, initialEdit, onInitialEditConsumed, openKey }) {
   const { create, update, remove, archive, fetchAll } = hooks;
 
   const [editTarget, setEditTarget]   = useState(null); // null=新增, obj=編輯
@@ -27,6 +27,16 @@ export default function AdminPanel({ open, onClose, announcements, allAnnounceme
       fetchAll(); // 背景刷新，不顯示 loading
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Logo 點擊開啟後台時，重置編輯表單（openKey 遞增代表 Logo 觸發）
+  const prevOpenKeyRef = useRef(openKey);
+  useEffect(() => {
+    if (openKey !== prevOpenKeyRef.current) {
+      prevOpenKeyRef.current = openKey;
+      setShowForm(false);
+      setEditTarget(null);
+    }
+  }, [openKey]);
 
   // 從卡片雙擊進入時，自動展開編輯表單
   const consumedRef = useRef(false);
