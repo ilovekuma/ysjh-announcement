@@ -61,9 +61,7 @@ export default function AnnouncementCarousel({ announcements, loading }) {
       {/* 主輪播區 */}
       <div
         className="relative flex-1 min-h-0 overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
-        onMouseEnter={pauseCarousel}
-        onMouseLeave={resumeCarousel}
-        onPointerDown={onPointerDown}
+onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         style={{ touchAction: 'pan-x' }}
       >
