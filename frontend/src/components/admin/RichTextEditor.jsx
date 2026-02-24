@@ -32,12 +32,41 @@ function fileToBase64(file) {
  * @param {string}   value    - 初始 HTML 值
  * @param {function} onChange - 內容變更時回呼 (html: string)
  */
+const MIN_H = 100;
+const MAX_H = 600;
+const DEFAULT_H = 180;
+
 export default function RichTextEditor({ value, onChange }) {
   const containerRef    = useRef(null);
   const quillRef        = useRef(null);
   const onChangeRef     = useRef(onChange);
   const [uploading, setUploading] = useState(false);
   const setUploadingRef = useRef(setUploading);
+
+  // 編輯框高度
+  const [editorH, setEditorH] = useState(DEFAULT_H);
+  const editorHRef = useRef(DEFAULT_H);
+  const setHeight = (h) => {
+    editorHRef.current = h;
+    setEditorH(h);
+  };
+
+  // 套用高度到 .ql-editor
+  useEffect(() => {
+    const el = containerRef.current?.querySelector('.ql-editor');
+    if (el) el.style.minHeight = editorH + 'px';
+  }, [editorH]);
+
+  // 拖曳調整高度
+  const startDrag = (e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = editorHRef.current;
+    const onMove = (ev) => setHeight(Math.max(MIN_H, Math.min(MAX_H, startH + ev.clientY - startY)));
+    const onUp   = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   // 保持 ref 最新
   useEffect(() => { onChangeRef.current     = onChange;    });
@@ -122,8 +151,19 @@ export default function RichTextEditor({ value, onChange }) {
 
   return (
     <div className="relative">
-      <div className="quill-wrapper rounded-lg overflow-hidden border border-school-blue/30">
+      <div className="quill-wrapper rounded-t-lg overflow-hidden border border-school-blue/30">
         <div ref={containerRef} />
+      </div>
+
+      {/* 拖曳調整高度把手 */}
+      <div
+        onPointerDown={startDrag}
+        title="拖曳調整編輯框高度"
+        className="flex items-center justify-center h-4 bg-gray-50 hover:bg-blue-50
+                   border border-t-0 border-school-blue/30 rounded-b-lg
+                   cursor-ns-resize select-none transition-colors"
+      >
+        <div className="w-10 h-0.5 rounded-full bg-gray-300" />
       </div>
 
       {/* 上傳中遮罩 */}
