@@ -95,11 +95,23 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
             ))}
           </div>
         </div>
+      ) : hasImg ? (
+        /* 純圖片：置中等比縮放至框內 */
+        <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 py-3 min-h-0 overflow-hidden">
+          {imageSrcs.map((src, i) => (
+            <img
+              key={i}
+              src={src}
+              alt="公告圖片"
+              className="max-w-full max-h-full object-contain rounded-md"
+            />
+          ))}
+        </div>
       ) : (
-        /* 單欄（純文字或純圖片） */
+        /* 純文字 */
         <div
           className="announcement-content flex-1 px-5 py-3 text-gray-700 overflow-hidden"
-          style={{ fontSize: hasTxt ? contentFontSize(content) : undefined }}
+          style={{ fontSize: contentFontSize(content) }}
           dangerouslySetInnerHTML={{ __html: content }}
         />
       )}
