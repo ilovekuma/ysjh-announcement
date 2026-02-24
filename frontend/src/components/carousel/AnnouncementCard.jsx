@@ -16,7 +16,7 @@ function contentFontSize(content) {
  * @param {boolean} isActive - 是否為當前輪播卡（放大效果）
  * @param {function} onClick  - 點擊展開詳情（總覽用）
  */
-export default function AnnouncementCard({ announcement, isActive = false, onClick }) {
+export default function AnnouncementCard({ announcement, isActive = false, onClick, onDoubleClick }) {
   const { department, label_color, content, end_date } = announcement;
   const remaining = daysLeft(end_date);
 
@@ -25,6 +25,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       animate={{ opacity: isActive ? 1 : 0.55 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       className={`bg-white rounded-2xl shadow-lg overflow-hidden border flex flex-col h-full
         ${isActive ? 'border-school-blue/40 shadow-school-blue/20 shadow-xl' : 'border-gray-200'}
         ${onClick ? 'cursor-pointer hover:shadow-xl transition-shadow' : ''}

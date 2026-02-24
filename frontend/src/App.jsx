@@ -11,8 +11,14 @@ export default function App() {
   const announcementsHook = useAnnouncements();
   const { announcements, allAnnouncements, loading, useMock } = announcementsHook;
 
-  const { adminOpen, handleLogoClick, closeAdmin } = useAdminAccess();
+  const { adminOpen, handleLogoClick, openAdmin, closeAdmin } = useAdminAccess();
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const [pendingEdit, setPendingEdit] = useState(null);
+
+  const handleCardDoubleClick = (ann) => {
+    setPendingEdit(ann);
+    openAdmin();
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 via-indigo-50 to-white overflow-hidden">
@@ -44,6 +50,7 @@ export default function App() {
             <AnnouncementCarousel
               announcements={announcements}
               loading={loading}
+              onCardDoubleClick={handleCardDoubleClick}
             />
           </div>
         </div>
@@ -69,6 +76,8 @@ export default function App() {
         allAnnouncements={allAnnouncements}
         hooks={announcementsHook}
         loading={loading}
+        initialEdit={pendingEdit}
+        onInitialEditConsumed={() => setPendingEdit(null)}
       />
     </div>
   );

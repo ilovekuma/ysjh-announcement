@@ -25,7 +25,8 @@ export function useAdminAccess() {
     }
   }, []);
 
+  const openAdmin  = useCallback(() => setAdminOpen(true),  []);
   const closeAdmin = useCallback(() => setAdminOpen(false), []);
 
-  return { adminOpen, handleLogoClick, closeAdmin };
+  return { adminOpen, handleLogoClick, openAdmin, closeAdmin };
 }

@@ -16,7 +16,7 @@ const PAGE_VARIANTS = {
  * AnnouncementCarousel — 固定 2×2 網格，15 秒自動換頁，支援垂直拖曳
  * 卡片字型大小由 AnnouncementCard 依內容長度自動縮放
  */
-export default function AnnouncementCarousel({ announcements, loading }) {
+export default function AnnouncementCarousel({ announcements, loading, onCardDoubleClick }) {
   const count     = announcements.length;
   const pageCount = Math.max(1, Math.ceil(count / CARDS_PER_PAGE));
 
@@ -76,7 +76,12 @@ onPointerDown={onPointerDown}
             className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-3 p-1"
           >
             {pageCards.map((ann) => (
-              <AnnouncementCard key={ann.id} announcement={ann} isActive />
+              <AnnouncementCard
+                key={ann.id}
+                announcement={ann}
+                isActive
+                onDoubleClick={() => onCardDoubleClick?.(ann)}
+              />
             ))}
           </motion.div>
         </AnimatePresence>

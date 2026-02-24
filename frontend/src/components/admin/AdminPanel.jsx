@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AnnouncementForm from './AnnouncementForm';
 import AnnouncementTable from './AnnouncementTable';
@@ -6,7 +6,7 @@ import AnnouncementTable from './AnnouncementTable';
 /**
  * AdminPanel — 管理後台 overlay
  */
-export default function AdminPanel({ open, onClose, announcements, allAnnouncements, hooks, loading }) {
+export default function AdminPanel({ open, onClose, announcements, allAnnouncements, hooks, loading, initialEdit, onInitialEditConsumed }) {
   const { create, update, remove, archive, fetchAll } = hooks;
 
   const [editTarget, setEditTarget]   = useState(null); // null=新增, obj=編輯
@@ -27,6 +27,18 @@ export default function AdminPanel({ open, onClose, announcements, allAnnounceme
       fetchAll(); // 背景刷新，不顯示 loading
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 從卡片雙擊進入時，自動展開編輯表單
+  const consumedRef = useRef(false);
+  useEffect(() => {
+    if (open && initialEdit && !consumedRef.current) {
+      consumedRef.current = true;
+      setEditTarget(initialEdit);
+      setShowForm(true);
+      onInitialEditConsumed?.();
+    }
+    if (!open) consumedRef.current = false;
+  }, [open, initialEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showFeedback = (type, msg) => {
     setFeedback({ type, msg });
