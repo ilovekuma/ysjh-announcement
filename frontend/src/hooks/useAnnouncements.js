@@ -43,6 +43,20 @@ export function useAnnouncements() {
 
   useEffect(() => { fetchActive(); }, [fetchActive]);
 
+  // 每 5 分鐘靜默重新 fetch（不顯示 loading），確保過期公告自動撤下、新公告自動出現
+  useEffect(() => {
+    if (useMock) return;
+    const id = setInterval(async () => {
+      try {
+        const data = await api.getActive();
+        if (Array.isArray(data)) setAnnouncements(data);
+      } catch {
+        // 背景刷新失敗不影響現有顯示
+      }
+    }, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [useMock]);
+
   // ── 寫入（Optimistic UI）────────────────────────────────────────
   //
   // 流程：

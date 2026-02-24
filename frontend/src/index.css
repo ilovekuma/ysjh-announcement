@@ -73,13 +73,9 @@
   margin-bottom: 0.4em;
 }
 
-/* 段落：行高繼承自 wrapper div（由編輯器存入 style），未設定時預設 1.8 */
-.announcement-content {
-  line-height: 1.8;
-}
+/* 段落：行高由 React style prop 直接注入父層 div，p 自然繼承 */
 .announcement-content p {
   margin-bottom: 0.5em;
-  line-height: inherit;
 }
 
 /* 粗體 / 斜體 / 底線 / 刪除線（Tailwind preflight 不全部重置，但補上保險） */
@@ -103,7 +99,6 @@
 .announcement-content ol {
   padding-left: 1.5em;
   margin-bottom: 0.5em;
-  line-height: inherit;
 }
 .announcement-content ul {
   list-style-type: disc;

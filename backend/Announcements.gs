@@ -11,6 +11,20 @@ function getSheet() {
 }
 
 /**
+ * 將 Sheets 的日期 cell 值格式化為 YYYY-MM-DD 字串
+ * getValues() 回傳的日期欄位是 JS Date 物件（Sheets 時區），
+ * 直接 JSON.stringify 會輸出 UTC ISO 字串，在 UTC+8 環境下會早一天。
+ */
+function formatDateCell(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  // 若已是字串（舊資料），取前 10 碼保持相容
+  return String(val).slice(0, 10);
+}
+
+/**
  * 將 row 陣列轉為公告物件
  */
 function rowToObj(row) {
@@ -19,10 +33,12 @@ function rowToObj(row) {
     department:  row[COL.DEPARTMENT],
     label_color: row[COL.LABEL_COLOR],
     content:     row[COL.CONTENT],
-    start_date:  row[COL.START_DATE],
-    end_date:    row[COL.END_DATE],
+    start_date:  formatDateCell(row[COL.START_DATE]),
+    end_date:    formatDateCell(row[COL.END_DATE]),
     status:      row[COL.STATUS],
-    created_at:  row[COL.CREATED_AT],
+    created_at:  row[COL.CREATED_AT] instanceof Date
+                   ? row[COL.CREATED_AT].toISOString()
+                   : String(row[COL.CREATED_AT]),
   };
 }
 

@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion';
 import { formatDate, daysLeft } from '../../utils/dateUtils';
 
+/** 從 HTML wrapper div 的 data-lh 屬性取出行高值 */
+function extractLineHeight(html) {
+  const m = (html || '').match(/data-lh="([^"]*)"/);
+  return m ? m[1] : '1.8';
+}
+
 /** 依純文字長度決定內容區字型大小 */
 function contentFontSize(content) {
   const len = (content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '').length;
@@ -38,10 +44,11 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
   const { department, label_color, content, end_date } = announcement;
   const remaining = daysLeft(end_date);
 
-  const imageSrcs = extractImageSrcs(content || '');
-  const textHtml  = stripImages(content || '');
-  const hasImg = imageSrcs.length > 0;
-  const hasTxt = textHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
+  const imageSrcs   = extractImageSrcs(content || '');
+  const textHtml    = stripImages(content || '');
+  const hasImg      = imageSrcs.length > 0;
+  const hasTxt      = textHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
+  const lineHeight  = extractLineHeight(content || '');
 
   return (
     <motion.div
@@ -80,7 +87,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
         <div className="flex-1 flex gap-2 px-5 py-3 min-h-0 overflow-hidden">
           <div
             className="announcement-content flex-1 text-gray-700 overflow-hidden"
-            style={{ fontSize: contentFontSize(textHtml) }}
+            style={{ fontSize: contentFontSize(textHtml), lineHeight }}
             dangerouslySetInnerHTML={{ __html: textHtml }}
           />
           <div className="flex-shrink-0 flex flex-col items-center justify-center gap-1 overflow-hidden"
@@ -111,7 +118,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
         /* 純文字 */
         <div
           className="announcement-content flex-1 px-5 py-3 text-gray-700 overflow-hidden"
-          style={{ fontSize: contentFontSize(content) }}
+          style={{ fontSize: contentFontSize(content), lineHeight }}
           dangerouslySetInnerHTML={{ __html: content }}
         />
       )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import RichTextEditor from './RichTextEditor';
-import { todayISO } from '../../utils/dateUtils';
+import { todayISO, toLocalDateString } from '../../utils/dateUtils';
 
 const DEPARTMENTS = [
   '教務處', '學務處', '總務處', '輔導室',
@@ -33,8 +33,8 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
         department:  initial.department  || '',
         label_color: initial.label_color || '#2D5DA6',
         content:     initial.content     || '',
-        start_date:  (initial.start_date || '').slice(0, 10),
-        end_date:    (initial.end_date   || '').slice(0, 10),
+        start_date:  toLocalDateString(initial.start_date) || todayISO(),
+        end_date:    toLocalDateString(initial.end_date),
       });
     } else {
       setForm(EMPTY_FORM);
