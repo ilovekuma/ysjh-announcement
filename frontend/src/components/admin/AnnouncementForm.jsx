@@ -47,9 +47,10 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
     e.preventDefault();
     if (!form.department) { alert('請選擇發布單位'); return; }
     if (!form.end_date)   { alert('請填寫截止日期'); return; }
-    // 去除所有 HTML 標籤後若無文字內容則視為空白
-    const textOnly = form.content.replace(/<[^>]*>/g, '').replace(/\s+/g, '');
-    if (!form.content || textOnly.length === 0) { alert('請填寫公告內容'); return; }
+    // 有文字或有圖片皆視為有效內容
+    const textOnly = (form.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
+    const hasImg   = /<img/i.test(form.content || '');
+    if (!hasImg && textOnly.length === 0) { alert('請填寫公告內容或上傳圖片'); return; }
     onSubmit(form);
   };
 
