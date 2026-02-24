@@ -41,6 +41,11 @@
   line-height: 1.8;
 }
 
+/* 游標進入編輯框時隱藏 placeholder */
+.ql-editor:focus.ql-blank::before {
+  display: none;
+}
+
 /* ================================================================
    Quill content display (read-only, in carousel / overview)
    Tailwind preflight 將所有 h1-h6 的 font-size / font-weight 重置為
