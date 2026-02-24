@@ -22,8 +22,7 @@ const LINE_HEIGHTS = [
 ];
 
 const DEFAULT_LINE_HEIGHT = '1.8';
-
-const MAX_SIZE_MB = 3;
+const MAX_SIZE_MB    = 3;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 /** File → base64 字串（不含 data:... 前綴） */
@@ -36,30 +35,45 @@ function fileToBase64(file) {
   });
 }
 
+/** 將 HTML 內容包上行高 wrapper（供卡片讀取） */
+function wrapContent(html, lh) {
+  return `<div data-lh="${lh}" style="line-height:${lh}">${html}</div>`;
+}
+
+/** 解析存入的 HTML，取出行高與實際內容 */
+function parseContent(html) {
+  const m = (html || '').match(/^<div data-lh="([^"]*)"[^>]*>([\s\S]*)<\/div>$/);
+  if (m) return { lineHeight: m[1], innerHtml: m[2] };
+  return { lineHeight: DEFAULT_LINE_HEIGHT, innerHtml: html || '' };
+}
+
 /**
  * RichTextEditor — Quill v2 封裝
- * 圖片按鈕會上傳至 Google Drive，插入公開 URL（非 Base64）
- *
- * @param {string}   value    - 初始 HTML 值
- * @param {function} onChange - 內容變更時回呼 (html: string)
+ * - 行高儲存在 wrapper div，卡片顯示時自動套用
+ * - 圖片上傳至 Google Drive（非 Base64）
  */
 export default function RichTextEditor({ value, onChange }) {
   const containerRef    = useRef(null);
   const quillRef        = useRef(null);
   const onChangeRef     = useRef(onChange);
-  const [uploading, setUploading]   = useState(false);
-  const [lineHeight, setLineHeight] = useState(DEFAULT_LINE_HEIGHT);
+  const lineHeightRef   = useRef(DEFAULT_LINE_HEIGHT);
+  const [lineHeight, setLineHeightState] = useState(DEFAULT_LINE_HEIGHT);
+  const [uploading, setUploading]        = useState(false);
   const setUploadingRef = useRef(setUploading);
 
-  // 保持 ref 最新
   useEffect(() => { onChangeRef.current     = onChange;    });
   useEffect(() => { setUploadingRef.current = setUploading; });
 
-  // 套用行高到編輯器
-  useEffect(() => {
+  /** 設定行高：同步更新 state、ref、DOM 樣式，並重新 emit 內容 */
+  const setLineHeight = (lh) => {
+    lineHeightRef.current = lh;
+    setLineHeightState(lh);
     const el = containerRef.current?.querySelector('.ql-editor');
-    if (el) el.style.lineHeight = lineHeight;
-  }, [lineHeight]);
+    if (el) el.style.lineHeight = lh;
+    if (quillRef.current) {
+      onChangeRef.current?.(wrapContent(quillRef.current.root.innerHTML, lh));
+    }
+  };
 
   useEffect(() => {
     if (!containerRef.current || quillRef.current) return;
@@ -74,20 +88,19 @@ export default function RichTextEditor({ value, onChange }) {
 
     quillRef.current = quill;
 
-    // 套用預設行高
-    quill.root.style.lineHeight = DEFAULT_LINE_HEIGHT;
+    // 載入初始值，還原行高
+    const { lineHeight: storedLh, innerHtml } = parseContent(value);
+    lineHeightRef.current = storedLh;
+    setLineHeightState(storedLh);
+    quill.root.style.lineHeight = storedLh;
+    if (innerHtml) quill.clipboard.dangerouslyPasteHTML(innerHtml);
 
-    // 設定初始內容
-    if (value) {
-      quill.clipboard.dangerouslyPasteHTML(value);
-    }
-
-    // 監聽內容變更
+    // 內容變更時 emit wrapped HTML
     quill.on('text-change', () => {
-      onChangeRef.current?.(quill.root.innerHTML);
+      onChangeRef.current?.(wrapContent(quill.root.innerHTML, lineHeightRef.current));
     });
 
-    // ── 自訂圖片上傳 handler ──────────────────────────────────
+    // 自訂圖片上傳 handler
     quill.getModule('toolbar').addHandler('image', () => {
       const input = document.createElement('input');
       input.type   = 'file';
@@ -96,21 +109,16 @@ export default function RichTextEditor({ value, onChange }) {
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return;
-
         if (file.size > MAX_SIZE_BYTES) {
           alert(`圖片大小不可超過 ${MAX_SIZE_MB}MB`);
           return;
         }
-
         setUploadingRef.current(true);
         const range = quill.getSelection() ?? { index: quill.getLength() };
-
         try {
           const base64 = await fileToBase64(file);
           const result = await api.uploadImage(base64, file.type, file.name);
-
           if (!result.success) throw new Error(result.error || '上傳失敗');
-
           quill.insertEmbed(range.index, 'image', result.url);
           quill.setSelection(range.index + 1);
         } catch (err) {
@@ -119,7 +127,6 @@ export default function RichTextEditor({ value, onChange }) {
           setUploadingRef.current(false);
         }
       };
-
       input.click();
     });
 
@@ -133,11 +140,19 @@ export default function RichTextEditor({ value, onChange }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 外部 value 重置（切換編輯目標時）
+  // 切換編輯目標時，還原行高與內容
   useEffect(() => {
     if (!quillRef.current) return;
-    if (quillRef.current.root.innerHTML !== value) {
-      quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
+    const { lineHeight: storedLh, innerHtml } = parseContent(value);
+
+    if (storedLh !== lineHeightRef.current) {
+      lineHeightRef.current = storedLh;
+      setLineHeightState(storedLh);
+      const el = containerRef.current?.querySelector('.ql-editor');
+      if (el) el.style.lineHeight = storedLh;
+    }
+    if (quillRef.current.root.innerHTML !== innerHtml) {
+      quillRef.current.clipboard.dangerouslyPasteHTML(innerHtml || '');
     }
   }, [value]);
 
@@ -162,8 +177,6 @@ export default function RichTextEditor({ value, onChange }) {
             </button>
           ))}
         </div>
-
-        {/* 間隔 + Emoji 查詢按鈕 */}
         <a
           href="https://getemoji.com"
           target="_blank"
