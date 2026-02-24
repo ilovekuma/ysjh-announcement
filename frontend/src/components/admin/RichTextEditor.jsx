@@ -12,6 +12,17 @@ const TOOLBAR_OPTIONS = [
   ['clean'],
 ];
 
+const LINE_HEIGHTS = [
+  { label: '1.0', value: '1' },
+  { label: '1.5', value: '1.5' },
+  { label: '1.8', value: '1.8' },
+  { label: '2.0', value: '2' },
+  { label: '2.5', value: '2.5' },
+  { label: '3.0', value: '3' },
+];
+
+const DEFAULT_LINE_HEIGHT = '1.8';
+
 const MAX_SIZE_MB = 3;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
@@ -32,45 +43,23 @@ function fileToBase64(file) {
  * @param {string}   value    - 初始 HTML 值
  * @param {function} onChange - 內容變更時回呼 (html: string)
  */
-const MIN_H = 100;
-const MAX_H = 600;
-const DEFAULT_H = 180;
-
 export default function RichTextEditor({ value, onChange }) {
   const containerRef    = useRef(null);
   const quillRef        = useRef(null);
   const onChangeRef     = useRef(onChange);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading]   = useState(false);
+  const [lineHeight, setLineHeight] = useState(DEFAULT_LINE_HEIGHT);
   const setUploadingRef = useRef(setUploading);
-
-  // 編輯框高度
-  const [editorH, setEditorH] = useState(DEFAULT_H);
-  const editorHRef = useRef(DEFAULT_H);
-  const setHeight = (h) => {
-    editorHRef.current = h;
-    setEditorH(h);
-  };
-
-  // 套用高度到 .ql-editor
-  useEffect(() => {
-    const el = containerRef.current?.querySelector('.ql-editor');
-    if (el) el.style.minHeight = editorH + 'px';
-  }, [editorH]);
-
-  // 拖曳調整高度
-  const startDrag = (e) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startH = editorHRef.current;
-    const onMove = (ev) => setHeight(Math.max(MIN_H, Math.min(MAX_H, startH + ev.clientY - startY)));
-    const onUp   = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  };
 
   // 保持 ref 最新
   useEffect(() => { onChangeRef.current     = onChange;    });
   useEffect(() => { setUploadingRef.current = setUploading; });
+
+  // 套用行高到編輯器
+  useEffect(() => {
+    const el = containerRef.current?.querySelector('.ql-editor');
+    if (el) el.style.lineHeight = lineHeight;
+  }, [lineHeight]);
 
   useEffect(() => {
     if (!containerRef.current || quillRef.current) return;
@@ -84,6 +73,9 @@ export default function RichTextEditor({ value, onChange }) {
     });
 
     quillRef.current = quill;
+
+    // 套用預設行高
+    quill.root.style.lineHeight = DEFAULT_LINE_HEIGHT;
 
     // 設定初始內容
     if (value) {
@@ -151,19 +143,29 @@ export default function RichTextEditor({ value, onChange }) {
 
   return (
     <div className="relative">
-      <div className="quill-wrapper rounded-t-lg overflow-hidden border border-school-blue/30">
-        <div ref={containerRef} />
+      {/* 行高選擇器 */}
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs text-gray-500">行高</span>
+        <div className="flex gap-1">
+          {LINE_HEIGHTS.map(({ label, value: lh }) => (
+            <button
+              key={lh}
+              type="button"
+              onClick={() => setLineHeight(lh)}
+              className={`text-xs px-2 py-0.5 rounded border transition-colors
+                ${lineHeight === lh
+                  ? 'bg-school-blue text-white border-school-blue'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-school-blue hover:text-school-blue'
+                }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 拖曳調整高度把手 */}
-      <div
-        onPointerDown={startDrag}
-        title="拖曳調整編輯框高度"
-        className="flex items-center justify-center h-4 bg-gray-50 hover:bg-blue-50
-                   border border-t-0 border-school-blue/30 rounded-b-lg
-                   cursor-ns-resize select-none transition-colors"
-      >
-        <div className="w-10 h-0.5 rounded-full bg-gray-300" />
+      <div className="quill-wrapper rounded-lg overflow-hidden border border-school-blue/30">
+        <div ref={containerRef} />
       </div>
 
       {/* 上傳中遮罩 */}
