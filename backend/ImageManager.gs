@@ -27,8 +27,8 @@ function uploadImageToDrive(base64, mimeType, fileName) {
   const sheet = getOrCreateImageSheet();
   sheet.appendRow([file.getId(), fileName, new Date().toISOString()]);
 
-  // 回傳可直接用在 <img src> 的公開 URL
-  const url = 'https://drive.google.com/uc?export=view&id=' + file.getId();
+  // 使用 thumbnail API URL（比 uc?export=view 更穩定，不會跳轉確認頁）
+  const url = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1600';
   return { success: true, url };
 }
 
