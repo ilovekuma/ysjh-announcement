@@ -35,7 +35,7 @@ export default function App() {
               📋 今日公告
             </h2>
             <p className="text-school-blue/50 text-xs">
-              上下拖曳切換 · 每 15 秒自動翻頁
+              上下拖曳切換 · 每 10 秒自動翻頁
             </p>
           </div>
 
