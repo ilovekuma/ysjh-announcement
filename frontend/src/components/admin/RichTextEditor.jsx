@@ -52,7 +52,7 @@ function parseContent(html) {
  * - 行高儲存在 wrapper div，卡片顯示時自動套用
  * - 圖片上傳至 Google Drive（非 Base64）
  */
-export default function RichTextEditor({ value, onChange }) {
+export default function RichTextEditor({ value, onChange, onLineHeightChange }) {
   const containerRef    = useRef(null);
   const quillRef        = useRef(null);
   const onChangeRef     = useRef(onChange);
@@ -70,6 +70,7 @@ export default function RichTextEditor({ value, onChange }) {
     setLineHeightState(lh);
     const el = containerRef.current?.querySelector('.ql-editor');
     if (el) el.style.lineHeight = lh;
+    onLineHeightChange?.(lh);
     if (quillRef.current) {
       onChangeRef.current?.(wrapContent(quillRef.current.root.innerHTML, lh));
     }

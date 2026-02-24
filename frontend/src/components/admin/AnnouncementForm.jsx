@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import RichTextEditor from './RichTextEditor';
 import { todayISO, toLocalDateString } from '../../utils/dateUtils';
 
+/** 從已儲存的 HTML 取出行高值（與 RichTextEditor wrapContent 格式對應） */
+function extractLH(html) {
+  const m = (html || '').match(/^<div data-lh="([^"]*)"[^>]*>/);
+  return m ? m[1] : '1.8';
+}
+
+/** 用明確的行高重新包裝內容，確保卡片可讀取到正確值 */
+function applyLH(html, lh) {
+  // 若 html 已有 wrapper，先去掉再重包；若無則直接包
+  const inner = (html || '').replace(/^<div data-lh="[^"]*"[^>]*>([\s\S]*)<\/div>$/, '$1');
+  const innerHtml = inner !== html ? inner : (html || '');
+  return `<div data-lh="${lh}" style="line-height:${lh}">${innerHtml}</div>`;
+}
+
 const DEPARTMENTS = [
   '教務處', '學務處', '總務處', '輔導室',
   '體育組', '圖書館', '校長室', '其他',
@@ -25,6 +39,7 @@ const EMPTY_FORM = {
  */
 export default function AnnouncementForm({ initial, onSubmit, onCancel, submitting }) {
   const [form, setForm] = useState(EMPTY_FORM);
+  const [lineHeight, setLineHeight] = useState('1.8');
 
   // 載入編輯目標
   useEffect(() => {
@@ -36,8 +51,10 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
         start_date:  toLocalDateString(initial.start_date) || todayISO(),
         end_date:    toLocalDateString(initial.end_date),
       });
+      setLineHeight(extractLH(initial.content));
     } else {
       setForm(EMPTY_FORM);
+      setLineHeight('1.8');
     }
   }, [initial]);
 
@@ -51,7 +68,8 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
     const textOnly = (form.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
     const hasImg   = /<img/i.test(form.content || '');
     if (!hasImg && textOnly.length === 0) { alert('請填寫公告內容或上傳圖片'); return; }
-    onSubmit(form);
+    // 用明確追蹤的 lineHeight 重新包裝，確保卡片顯示正確行高
+    onSubmit({ ...form, content: applyLH(form.content, lineHeight) });
   };
 
   return (
@@ -146,6 +164,7 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
         <RichTextEditor
           value={form.content}
           onChange={(html) => setForm(f => ({ ...f, content: html }))}
+          onLineHeightChange={setLineHeight}
         />
       </div>
 
