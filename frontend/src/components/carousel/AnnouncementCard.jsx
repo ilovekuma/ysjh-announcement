@@ -10,15 +10,38 @@ function contentFontSize(content) {
   return '14px';
 }
 
+/** 從 HTML 中提取所有 img src */
+function extractImageSrcs(html) {
+  const srcs = [];
+  const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    srcs.push(match[1]);
+  }
+  return srcs;
+}
+
+/** 移除所有 img 標籤及其產生的空段落 */
+function stripImages(html) {
+  return (html || '')
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '');
+}
+
 /**
  * AnnouncementCard — 單張公告卡片
- * @param {object} announcement
- * @param {boolean} isActive - 是否為當前輪播卡（放大效果）
- * @param {function} onClick  - 點擊展開詳情（總覽用）
+ * 若含圖片且含文字：左欄文字 / 右欄圖片
+ * 若僅含圖片：單欄圖片
+ * 若僅含文字：單欄文字（原本行為）
  */
 export default function AnnouncementCard({ announcement, isActive = false, onClick, onDoubleClick }) {
   const { department, label_color, content, end_date } = announcement;
   const remaining = daysLeft(end_date);
+
+  const imageSrcs = extractImageSrcs(content || '');
+  const textHtml  = stripImages(content || '');
+  const hasImg = imageSrcs.length > 0;
+  const hasTxt = textHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
 
   return (
     <motion.div
@@ -32,7 +55,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       `}
     >
       {/* 頂部標籤列 */}
-      <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+      <div className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-2">
         <span
           className="inline-flex items-center gap-1 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm"
           style={{ backgroundColor: label_color || '#2D5DA6' }}
@@ -40,8 +63,6 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
           <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
           {department || '校方'}
         </span>
-
-        {/* 剩餘天數 badge */}
         {remaining !== null && (
           <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full
             ${remaining <= 2 ? 'bg-red-100 text-red-600' :
@@ -53,15 +74,38 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
         )}
       </div>
 
-      {/* 公告內容（Quill HTML） */}
-      <div
-        className="announcement-content flex-1 px-5 py-3 text-gray-700 overflow-hidden"
-        style={{ fontSize: contentFontSize(content) }}
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
+      {/* 內容區 */}
+      {hasImg && hasTxt ? (
+        /* 圖文並排：左文右圖 */
+        <div className="flex-1 flex gap-2 px-5 py-3 min-h-0 overflow-hidden">
+          <div
+            className="announcement-content flex-1 text-gray-700 overflow-hidden"
+            style={{ fontSize: contentFontSize(textHtml) }}
+            dangerouslySetInnerHTML={{ __html: textHtml }}
+          />
+          <div className="flex-shrink-0 flex flex-col items-center justify-center gap-1 overflow-hidden"
+            style={{ width: '42%' }}>
+            {imageSrcs.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt="公告圖片"
+                className="w-full object-contain rounded-md"
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* 單欄（純文字或純圖片） */
+        <div
+          className="announcement-content flex-1 px-5 py-3 text-gray-700 overflow-hidden"
+          style={{ fontSize: hasTxt ? contentFontSize(content) : undefined }}
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      )}
 
       {/* 底部日期 */}
-      <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+      <div className="flex-shrink-0 px-5 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
         <span>起：{formatDate(announcement.start_date)}</span>
         <span>迄：{formatDate(end_date)}</span>
       </div>
