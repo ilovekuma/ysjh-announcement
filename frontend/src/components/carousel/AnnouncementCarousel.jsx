@@ -57,64 +57,82 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
   }
 
   return (
-    <div className="flex flex-col h-full gap-2">
-      {/* 主輪播區 */}
-      <div
-        className="relative flex-1 min-h-0 overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
-onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        style={{ touchAction: 'pan-x' }}
-      >
-        <AnimatePresence initial={false} custom={direction} mode="sync">
-          <motion.div
-            key={page}
-            custom={direction}
-            variants={PAGE_VARIANTS}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-0"
-          >
-            {pageCards.map((ann) => (
+    <>
+      {/* ── 手機版：單欄垂直捲動，無輪播 ── */}
+      <div className="md:hidden h-full overflow-y-auto overscroll-contain">
+        <div className="flex flex-col gap-3 pb-4">
+          {announcements.map((ann) => (
+            <div key={ann.id} className="h-64 flex-shrink-0">
               <AnnouncementCard
-                key={ann.id}
                 announcement={ann}
                 isActive
                 onDoubleClick={() => onCardDoubleClick?.(ann)}
               />
-            ))}
-          </motion.div>
-        </AnimatePresence>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* 底部導覽 */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-4">
-        {pageCount > 1 && (
-          <button onClick={prev} aria-label="上一頁"
-            className="w-9 h-9 rounded-full bg-white shadow border border-gray-200
-                       flex items-center justify-center text-school-navy
-                       hover:bg-school-navy hover:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-            </svg>
-          </button>
-        )}
-        <CarouselDots count={pageCount} current={page} onDotClick={(i) => goTo(i, i > page ? 1 : -1)} />
-        {pageCount > 1 && (
-          <button onClick={next} aria-label="下一頁"
-            className="w-9 h-9 rounded-full bg-white shadow border border-gray-200
-                       flex items-center justify-center text-school-navy
-                       hover:bg-school-navy hover:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        )}
-      </div>
+      {/* ── 桌面版：2×2 網格自動輪播 ── */}
+      <div className="hidden md:flex flex-col h-full gap-2">
+        {/* 主輪播區 */}
+        <div
+          className="relative flex-1 min-h-0 overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          style={{ touchAction: 'pan-x' }}
+        >
+          <AnimatePresence initial={false} custom={direction} mode="sync">
+            <motion.div
+              key={page}
+              custom={direction}
+              variants={PAGE_VARIANTS}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-0"
+            >
+              {pageCards.map((ann) => (
+                <AnnouncementCard
+                  key={ann.id}
+                  announcement={ann}
+                  isActive
+                  onDoubleClick={() => onCardDoubleClick?.(ann)}
+                />
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-      <p className="flex-shrink-0 text-center text-xs text-gray-400 -mt-1">
-        第 {page + 1} 頁 / 共 {pageCount} 頁 &nbsp;·&nbsp; {count} 則公告
-      </p>
-    </div>
+        {/* 底部導覽 */}
+        <div className="flex-shrink-0 flex items-center justify-center gap-4">
+          {pageCount > 1 && (
+            <button onClick={prev} aria-label="上一頁"
+              className="w-9 h-9 rounded-full bg-white shadow border border-gray-200
+                         flex items-center justify-center text-school-navy
+                         hover:bg-school-navy hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+          )}
+          <CarouselDots count={pageCount} current={page} onDotClick={(i) => goTo(i, i > page ? 1 : -1)} />
+          {pageCount > 1 && (
+            <button onClick={next} aria-label="下一頁"
+              className="w-9 h-9 rounded-full bg-white shadow border border-gray-200
+                         flex items-center justify-center text-school-navy
+                         hover:bg-school-navy hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <p className="flex-shrink-0 text-center text-xs text-gray-400 -mt-1">
+          第 {page + 1} 頁 / 共 {pageCount} 頁 &nbsp;·&nbsp; {count} 則公告
+        </p>
+      </div>
+    </>
   );
 }
