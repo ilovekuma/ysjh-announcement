@@ -3,7 +3,7 @@ import Quill from 'quill';
 import * as api from '../../services/api';
 
 const TOOLBAR_OPTIONS = [
-  [{ 'header': [1, 2, 3, false] }],
+  [{ 'header': [1, 2] }],
   ['bold', 'italic', 'underline', 'strike'],
   [{ 'color': [] }, { 'background': [] }],
   [{ 'list': 'ordered' }, { 'list': 'bullet' }],
@@ -94,7 +94,12 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
     lineHeightRef.current = storedLh;
     setLineHeightState(storedLh);
     quill.root.style.lineHeight = storedLh;
-    if (innerHtml) quill.clipboard.dangerouslyPasteHTML(innerHtml);
+    if (innerHtml) {
+      quill.clipboard.dangerouslyPasteHTML(innerHtml);
+    } else {
+      // 新公告：預設 Heading 2
+      quill.format('header', 2);
+    }
 
     // 內容變更時 emit wrapped HTML
     quill.on('text-change', () => {
