@@ -159,30 +159,13 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
 
   return (
     <div className="relative">
-      {/* 行高選擇器 + Emoji 連結 */}
+      {/* Emoji 連結 */}
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs text-gray-500">行高</span>
-        <div className="flex gap-1">
-          {LINE_HEIGHTS.map(({ label, value: lh }) => (
-            <button
-              key={lh}
-              type="button"
-              onClick={() => setLineHeight(lh)}
-              className={`text-xs px-2 py-0.5 rounded border transition-colors
-                ${lineHeight === lh
-                  ? 'bg-school-blue text-white border-school-blue'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-school-blue hover:text-school-blue'
-                }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <a
           href="https://getemoji.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-4 flex items-center gap-1 text-xs px-2 py-0.5 rounded border
+          className="flex items-center gap-1 text-xs px-2 py-0.5 rounded border
                      border-gray-300 text-gray-600 bg-white hover:border-school-blue
                      hover:text-school-blue transition-colors"
           title="前往 Emoji 查詢頁面"
