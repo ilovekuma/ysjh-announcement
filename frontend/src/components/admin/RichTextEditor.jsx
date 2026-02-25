@@ -97,8 +97,8 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
     if (innerHtml) {
       quill.clipboard.dangerouslyPasteHTML(innerHtml);
     } else {
-      // 新公告：預設 Heading 2
-      quill.format('header', 2);
+      // 新公告：silent 套用 H2，不觸發 text-change
+      quill.formatLine(0, 0, 'header', 2, 'silent');
     }
 
     // 內容變更時 emit wrapped HTML
@@ -158,7 +158,12 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
       if (el) el.style.lineHeight = storedLh;
     }
     if (quillRef.current.root.innerHTML !== innerHtml) {
-      quillRef.current.clipboard.dangerouslyPasteHTML(innerHtml || '');
+      if (innerHtml) {
+        quillRef.current.clipboard.dangerouslyPasteHTML(innerHtml);
+      } else {
+        quillRef.current.setText('');
+        quillRef.current.formatLine(0, 0, 'header', 2, 'silent');
+      }
     }
   }, [value]);
 
