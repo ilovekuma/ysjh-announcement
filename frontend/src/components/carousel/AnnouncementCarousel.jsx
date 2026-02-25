@@ -57,7 +57,7 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
   }
 
   return (
-    <div className="flex flex-col h-full gap-3">
+    <div className="flex flex-col h-full gap-2">
       {/* 主輪播區 */}
       <div
         className="relative flex-1 min-h-0 overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
@@ -73,7 +73,7 @@ onPointerDown={onPointerDown}
             initial="enter"
             animate="center"
             exit="exit"
-            className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-3 p-1"
+            className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-0"
           >
             {pageCards.map((ann) => (
               <AnnouncementCard

@@ -1,5 +1,6 @@
+import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { formatDate, daysLeft } from '../../utils/dateUtils';
+import { daysLeft } from '../../utils/dateUtils';
 
 /** 從 HTML wrapper div 的 data-lh 屬性取出行高值 */
 function extractLineHeight(html) {
@@ -7,13 +8,39 @@ function extractLineHeight(html) {
   return m ? m[1] : '1.8';
 }
 
-/** 依純文字長度決定內容區字型大小 */
-function contentFontSize(content) {
-  const len = (content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '').length;
-  if (len > 400) return '10px';
-  if (len > 250) return '11px';
-  if (len > 150) return '12px';
-  return '14px';
+/**
+ * 文字內容自動縮放：若文字超出容器高度，等比縮小直到不截斷
+ */
+function ScaledContent({ html, className, style }) {
+  const wrapRef  = useRef(null);
+  const innerRef = useRef(null);
+
+  useEffect(() => {
+    const wrap  = wrapRef.current;
+    const inner = innerRef.current;
+    if (!wrap || !inner) return;
+
+    // 先還原，量測原始高度
+    inner.style.transform = '';
+    inner.style.width     = '';
+
+    requestAnimationFrame(() => {
+      const wh = wrap.clientHeight;
+      const ih = inner.scrollHeight;
+      if (ih > wh + 2) {
+        const s = wh / ih;
+        inner.style.transform       = `scale(${s})`;
+        inner.style.transformOrigin = 'top left';
+        inner.style.width           = `${100 / s}%`;
+      }
+    });
+  }, [html]);
+
+  return (
+    <div ref={wrapRef} className={className} style={{ ...style, overflow: 'hidden' }}>
+      <div ref={innerRef} dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
+  );
 }
 
 /** 從 HTML 中提取所有 img src */
@@ -85,20 +112,15 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       {hasImg && hasTxt ? (
         /* 圖文並排：左文右圖 */
         <div className="flex-1 flex gap-2 px-5 py-3 min-h-0 overflow-hidden">
-          <div
-            className="announcement-content flex-1 text-gray-700 overflow-hidden"
-            style={{ fontSize: contentFontSize(textHtml), lineHeight }}
-            dangerouslySetInnerHTML={{ __html: textHtml }}
+          <ScaledContent
+            html={textHtml}
+            className="announcement-content flex-1 text-gray-700 min-h-0"
+            style={{ lineHeight }}
           />
           <div className="flex-shrink-0 flex flex-col items-center justify-center gap-1 overflow-hidden"
             style={{ width: '42%' }}>
             {imageSrcs.map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt="公告圖片"
-                className="w-full object-contain rounded-md"
-              />
+              <img key={i} src={src} alt="公告圖片" className="w-full object-contain rounded-md" />
             ))}
           </div>
         </div>
@@ -106,28 +128,17 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
         /* 純圖片：置中等比縮放至框內 */
         <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 py-3 min-h-0 overflow-hidden">
           {imageSrcs.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt="公告圖片"
-              className="max-w-full max-h-full object-contain rounded-md"
-            />
+            <img key={i} src={src} alt="公告圖片" className="max-w-full max-h-full object-contain rounded-md" />
           ))}
         </div>
       ) : (
         /* 純文字 */
-        <div
-          className="announcement-content flex-1 px-5 py-3 text-gray-700 overflow-hidden"
-          style={{ fontSize: contentFontSize(content), lineHeight }}
-          dangerouslySetInnerHTML={{ __html: content }}
+        <ScaledContent
+          html={content}
+          className="announcement-content flex-1 px-5 py-3 text-gray-700 min-h-0"
+          style={{ lineHeight }}
         />
       )}
-
-      {/* 底部日期 */}
-      <div className="flex-shrink-0 px-5 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
-        <span>起：{formatDate(announcement.start_date)}</span>
-        <span>迄：{formatDate(end_date)}</span>
-      </div>
     </motion.div>
   );
 }
