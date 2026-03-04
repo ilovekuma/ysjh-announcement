@@ -61,6 +61,12 @@ function stripImages(html) {
     .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '');
 }
 
+/** 移除空行（空段落、只有 br 的段落） */
+function stripEmptyLines(html) {
+  return (html || '')
+    .replace(/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '');
+}
+
 /**
  * AnnouncementCard — 單張公告卡片
  * 若含圖片且含文字：左欄文字 / 右欄圖片
@@ -71,8 +77,9 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
   const { department, label_color, content, end_date } = announcement;
   const remaining = daysLeft(end_date);
 
-  const imageSrcs   = extractImageSrcs(content || '');
-  const textHtml    = stripImages(content || '');
+  const cleanContent = stripEmptyLines(content || '');
+  const imageSrcs   = extractImageSrcs(cleanContent);
+  const textHtml    = stripImages(cleanContent);
   const hasImg      = imageSrcs.length > 0;
   const hasTxt      = textHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
   const lineHeight  = extractLineHeight(content || '');
@@ -134,7 +141,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       ) : (
         /* 純文字 */
         <ScaledContent
-          html={content}
+          html={cleanContent}
           className="announcement-content flex-1 px-5 py-3 text-gray-700 min-h-0"
           style={{ lineHeight }}
         />

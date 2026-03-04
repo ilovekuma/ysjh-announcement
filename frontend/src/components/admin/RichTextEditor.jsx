@@ -22,6 +22,8 @@ const LINE_HEIGHTS = [
 ];
 
 const DEFAULT_LINE_HEIGHT = '1.8';
+
+const QUICK_SYMBOLS = ['⭐️', '🔥', '❤️', '❌', '✔️', '📣'];
 const MAX_SIZE_MB    = 3;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
@@ -179,8 +181,8 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
 
   return (
     <div className="relative">
-      {/* Emoji 連結 */}
-      <div className="flex items-center gap-2 mb-1">
+      {/* Emoji 連結 + 快速符號按鈕 */}
+      <div className="flex items-center gap-2 mb-1 flex-wrap">
         <a
           href="https://getemoji.com"
           target="_blank"
@@ -192,6 +194,24 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
         >
           😊 Emoji
         </a>
+        {QUICK_SYMBOLS.map(sym => (
+          <button
+            key={sym}
+            type="button"
+            title={`插入 ${sym}`}
+            onClick={() => {
+              const quill = quillRef.current;
+              if (!quill) return;
+              const range = quill.getSelection() ?? { index: quill.getLength() - 1 };
+              quill.insertText(range.index, sym, 'user');
+              quill.setSelection(range.index + sym.length);
+            }}
+            className="text-base px-1.5 py-0.5 rounded border border-gray-300 bg-white
+                       hover:border-school-blue hover:bg-blue-50 transition-colors leading-none"
+          >
+            {sym}
+          </button>
+        ))}
       </div>
 
       <div className="quill-wrapper rounded-lg overflow-hidden border border-school-blue/30">

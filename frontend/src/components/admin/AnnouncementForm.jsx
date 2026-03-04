@@ -68,8 +68,9 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
     const textOnly = (form.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
     const hasImg   = /<img/i.test(form.content || '');
     if (!hasImg && textOnly.length === 0) { alert('請填寫公告內容或上傳圖片'); return; }
-    // 用明確追蹤的 lineHeight 重新包裝，確保卡片顯示正確行高
-    onSubmit({ ...form, content: applyLH(form.content, lineHeight) });
+    // 移除空行後再包裝行高
+    const cleaned = (form.content || '').replace(/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '');
+    onSubmit({ ...form, content: applyLH(cleaned, lineHeight) });
   };
 
   return (

@@ -5,6 +5,20 @@ import { useCarousel } from '../../hooks/useCarousel';
 
 const CARDS_PER_PAGE = 4;
 
+const MIN_MS = 8000;
+const MAX_MS = 30000;
+const CHARS_PER_SEC = 5; // 中文閱讀速度約 300 字/分鐘
+
+/** 計算一頁卡片的建議停留毫秒數 */
+function calcPageInterval(cards) {
+  const chars = cards.reduce((sum, ann) => {
+    const text = (ann.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
+    return sum + text.length;
+  }, 0);
+  const ms = Math.round((chars / CHARS_PER_SEC) * 1000);
+  return Math.min(MAX_MS, Math.max(MIN_MS, ms));
+}
+
 // 垂直換頁動畫
 const PAGE_VARIANTS = {
   enter: (dir) => ({ y: dir > 0 ? '100%' : '-100%', opacity: 0 }),
@@ -20,6 +34,11 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
   const count     = announcements.length;
   const pageCount = Math.max(1, Math.ceil(count / CARDS_PER_PAGE));
 
+  const intervals = Array.from({ length: pageCount }, (_, i) => {
+    const cards = announcements.slice(i * CARDS_PER_PAGE, i * CARDS_PER_PAGE + CARDS_PER_PAGE);
+    return calcPageInterval(cards);
+  });
+
   const {
     current: page,
     direction,
@@ -30,7 +49,7 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
     onPointerUp,
     pauseCarousel,
     resumeCarousel,
-  } = useCarousel(pageCount);
+  } = useCarousel(pageCount, intervals);
 
   const pageCards = announcements.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
 
