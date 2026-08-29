@@ -108,6 +108,11 @@
   height: auto;
 }
 
+/* 對齊（Quill 輸出 ql-align-* class，卡片顯示需自行定義） */
+.announcement-content .ql-align-center  { text-align: center; }
+.announcement-content .ql-align-right   { text-align: right; }
+.announcement-content .ql-align-justify { text-align: justify; }
+
 /* 連結 */
 .announcement-content a {
   color: #2D5DA6;

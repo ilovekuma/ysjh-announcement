@@ -112,7 +112,10 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
           const fmt = quill.getFormat(idx, 1);
           // 清單項目保留 list 格式，不強制套 H1
           if (!fmt.header && !fmt.list) {
+            const align = fmt.align; // 先記住對齊方式
             quill.formatLine(idx, 1, 'header', 1, 'silent');
+            // Quill v2 重建 block 時可能丟失 align，重新套回
+            if (align) quill.formatLine(idx, 1, 'align', align, 'silent');
           }
         });
       }
