@@ -3,7 +3,6 @@ import Quill from 'quill';
 import * as api from '../../services/api';
 
 const TOOLBAR_OPTIONS = [
-  [{ 'header': [1, 2] }],
   ['bold', 'italic', 'underline', 'strike'],
   [{ 'color': [] }, { 'background': [] }],
   [{ 'list': 'ordered' }, { 'list': 'bullet' }],
@@ -110,7 +109,9 @@ export default function RichTextEditor({ value, onChange, onLineHeightChange }) 
         const lines = quill.getLines(0);
         lines.forEach(line => {
           const idx = quill.getIndex(line);
-          if (!quill.getFormat(idx, 1).header) {
+          const fmt = quill.getFormat(idx, 1);
+          // 清單項目保留 list 格式，不強制套 H1
+          if (!fmt.header && !fmt.list) {
             quill.formatLine(idx, 1, 'header', 1, 'silent');
           }
         });

@@ -1,15 +1,46 @@
+import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import AnnouncementCard from './AnnouncementCard';
-import CarouselDots from './CarouselDots';
 import { useCarousel } from '../../hooks/useCarousel';
 
 const CARDS_PER_PAGE = 4;
-
+const IMAGE_PAGE_MS  = 10000;
 const MIN_MS = 8000;
 const MAX_MS = 30000;
-const CHARS_PER_SEC = 5; // 中文閱讀速度約 300 字/分鐘
+const CHARS_PER_SEC = 5;
 
-/** 計算一頁卡片的建議停留毫秒數 */
+function hasImage(ann) {
+  return /<img/i.test(ann.content || '');
+}
+
+/** 含圖公告獨佔一頁（全版），純文字公告 4 張一組 */
+function buildPages(announcements) {
+  const pages = [];
+  let textGroup = [];
+
+  for (const ann of announcements) {
+    if (hasImage(ann)) {
+      if (textGroup.length > 0) {
+        for (let i = 0; i < textGroup.length; i += CARDS_PER_PAGE) {
+          pages.push({ type: 'text', cards: textGroup.slice(i, i + CARDS_PER_PAGE) });
+        }
+        textGroup = [];
+      }
+      pages.push({ type: 'image', cards: [ann] });
+    } else {
+      textGroup.push(ann);
+    }
+  }
+
+  if (textGroup.length > 0) {
+    for (let i = 0; i < textGroup.length; i += CARDS_PER_PAGE) {
+      pages.push({ type: 'text', cards: textGroup.slice(i, i + CARDS_PER_PAGE) });
+    }
+  }
+
+  return pages.length > 0 ? pages : [{ type: 'text', cards: [] }];
+}
+
 function calcPageInterval(cards) {
   const chars = cards.reduce((sum, ann) => {
     const text = (ann.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
@@ -30,14 +61,14 @@ const PAGE_VARIANTS = {
  * AnnouncementCarousel — 固定 2×2 網格，15 秒自動換頁，支援垂直拖曳
  * 卡片字型大小由 AnnouncementCard 依內容長度自動縮放
  */
-export default function AnnouncementCarousel({ announcements, loading, onCardDoubleClick }) {
-  const count     = announcements.length;
-  const pageCount = Math.max(1, Math.ceil(count / CARDS_PER_PAGE));
+export default function AnnouncementCarousel({ announcements, loading, onCardDoubleClick, onNavInfo }) {
+  const count = announcements.length;
+  const pages = buildPages(announcements);
+  const pageCount = pages.length;
 
-  const intervals = Array.from({ length: pageCount }, (_, i) => {
-    const cards = announcements.slice(i * CARDS_PER_PAGE, i * CARDS_PER_PAGE + CARDS_PER_PAGE);
-    return calcPageInterval(cards);
-  });
+  const intervals = pages.map(p =>
+    p.type === 'image' ? IMAGE_PAGE_MS : calcPageInterval(p.cards)
+  );
 
   const {
     current: page,
@@ -51,7 +82,13 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
     resumeCarousel,
   } = useCarousel(pageCount, intervals);
 
-  const pageCards = announcements.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
+  const currentPage = pages[page] ?? { type: 'text', cards: [] };
+
+  // 通知父層目前導覽狀態，讓 Header 顯示
+  useEffect(() => {
+    onNavInfo?.({ page, pageCount, count, prev, next, goTo });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageCount, count]);
 
   if (loading) {
     return (
@@ -92,11 +129,10 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
         </div>
       </div>
 
-      {/* ── 桌面版：2×2 網格自動輪播 ── */}
-      <div className="hidden md:flex flex-col h-full gap-2">
-        {/* 主輪播區 */}
+      {/* ── 桌面版：2×2 網格自動輪播（導覽已移至頂部 Header）── */}
+      <div className="hidden md:block h-full">
         <div
-          className="relative flex-1 min-h-0 overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
+          className="relative w-full h-full overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           style={{ touchAction: 'pan-x' }}
@@ -109,48 +145,32 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
               initial="enter"
               animate="center"
               exit="exit"
-              className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-0"
+              className={`absolute inset-0 p-0 ${
+                currentPage.type === 'image'
+                  ? ''
+                  : 'grid grid-cols-2 grid-rows-2 gap-2'
+              }`}
             >
-              {pageCards.map((ann) => (
+              {currentPage.type === 'image' ? (
                 <AnnouncementCard
-                  key={ann.id}
-                  announcement={ann}
+                  key={currentPage.cards[0].id}
+                  announcement={currentPage.cards[0]}
                   isActive
-                  onDoubleClick={() => onCardDoubleClick?.(ann)}
+                  onDoubleClick={() => onCardDoubleClick?.(currentPage.cards[0])}
                 />
-              ))}
+              ) : (
+                currentPage.cards.map((ann) => (
+                  <AnnouncementCard
+                    key={ann.id}
+                    announcement={ann}
+                    isActive
+                    onDoubleClick={() => onCardDoubleClick?.(ann)}
+                  />
+                ))
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* 底部導覽 */}
-        <div className="flex-shrink-0 flex items-center justify-center gap-4">
-          {pageCount > 1 && (
-            <button onClick={prev} aria-label="上一頁"
-              className="w-9 h-9 rounded-full bg-white shadow border border-gray-200
-                         flex items-center justify-center text-school-navy
-                         hover:bg-school-navy hover:text-white transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            </button>
-          )}
-          <CarouselDots count={pageCount} current={page} onDotClick={(i) => goTo(i, i > page ? 1 : -1)} />
-          {pageCount > 1 && (
-            <button onClick={next} aria-label="下一頁"
-              className="w-9 h-9 rounded-full bg-white shadow border border-gray-200
-                         flex items-center justify-center text-school-navy
-                         hover:bg-school-navy hover:text-white transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        <p className="flex-shrink-0 text-center text-xs text-gray-400 -mt-1">
-          第 {page + 1} 頁 / 共 {pageCount} 頁 &nbsp;·&nbsp; {count} 則公告
-        </p>
       </div>
     </>
   );

@@ -13,6 +13,7 @@ export default function App() {
   const { adminOpen, handleLogoClick: _handleLogoClick, openAdmin, closeAdmin } = useAdminAccess();
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [pendingEdit, setPendingEdit] = useState(null);
+  const [carouselNav, setCarouselNav] = useState(null);
   const [adminOpenKey, setAdminOpenKey] = useState(0);
 
   // Logo 點擊：開啟後台，同時遞增 key 讓 AdminPanel 重置表單
@@ -33,15 +34,17 @@ export default function App() {
         onLogoClick={handleLogoClick}
         onOverviewOpen={() => setOverviewOpen(true)}
         useMock={useMock}
+        carouselNav={carouselNav}
       />
 
       {/* 主內容區：flex-1 + min-h-0 讓輪播撐滿剩餘高度 */}
-      <main className="flex-1 min-h-0 px-3 py-2">
-        <div className="h-full w-full max-w-7xl mx-auto">
+      <main className="flex-1 min-h-0 px-0.5 py-1">
+        <div className="h-full w-full">
           <AnnouncementCarousel
             announcements={announcements}
             loading={loading}
             onCardDoubleClick={handleCardDoubleClick}
+            onNavInfo={setCarouselNav}
           />
         </div>
       </main>

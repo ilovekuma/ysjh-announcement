@@ -27,8 +27,7 @@ function uploadImageToDrive(base64, mimeType, fileName) {
   const sheet = getOrCreateImageSheet();
   sheet.appendRow([file.getId(), fileName, new Date().toISOString()]);
 
-  // 使用 thumbnail API URL（比 uc?export=view 更穩定，不會跳轉確認頁）
-  const url = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1600';
+  const url = 'https://lh3.googleusercontent.com/d/' + file.getId() + '=s0';
   return { success: true, url };
 }
 

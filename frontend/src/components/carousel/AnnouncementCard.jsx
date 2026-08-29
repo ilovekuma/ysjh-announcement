@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { daysLeft } from '../../utils/dateUtils';
 
@@ -9,37 +9,133 @@ function extractLineHeight(html) {
 }
 
 /**
- * 文字內容自動縮放：若文字超出容器高度，等比縮小直到不截斷
+ * 純圖片顯示：ResizeObserver 量出容器實際 px 尺寸後，
+ * 用 object-fit: contain 填滿可用空間（等比縮放，不裁切）。
+ * 多張圖片時平均分配高度。
  */
-function ScaledContent({ html, className, style }) {
-  const wrapRef  = useRef(null);
-  const innerRef = useRef(null);
+function PureImageDisplay({ imageSrcs }) {
+  const containerRef = useRef(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
-    const wrap  = wrapRef.current;
-    const inner = innerRef.current;
-    if (!wrap || !inner) return;
-
-    // 先還原，量測原始高度
-    inner.style.transform = '';
-    inner.style.width     = '';
-
-    requestAnimationFrame(() => {
-      const wh = wrap.clientHeight;
-      const ih = inner.scrollHeight;
-      if (ih > wh + 2) {
-        const s = wh / ih;
-        inner.style.transform       = `scale(${s})`;
-        inner.style.transformOrigin = 'top left';
-        inner.style.width           = `${100 / s}%`;
-      }
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setDims({ w: Math.floor(width), h: Math.floor(height) });
     });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const GAP = 8;
+  const imgH = dims.h > 0
+    ? Math.floor((dims.h - GAP * (imageSrcs.length - 1)) / imageSrcs.length)
+    : 0;
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 px-4 py-3 overflow-hidden"
+    >
+      {dims.w > 0 && imgH > 0 && imageSrcs.map((src, i) => (
+        <img
+          key={i}
+          src={src}
+          alt="公告圖片"
+          className="rounded-md"
+          style={{ width: dims.w, height: imgH, objectFit: 'contain' }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 圖文混排 / 純文字內容
+ * - useLayoutEffect（繪製前執行）+ 直接操作 img DOM 樣式，無閃爍
+ * - 暫時隱藏圖片量測純文字高度，剩餘高度等分給每張圖
+ * - 圖片設為 width:100% / height:perImg / objectFit:contain，填滿並等比縮放
+ */
+function TextImageContent({ html, lineHeight }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const adjust = () => {
+      const imgs = Array.from(el.querySelectorAll('img'));
+      if (imgs.length === 0) return;
+
+      const containerH = el.clientHeight;
+      if (containerH === 0) return;
+
+      // 隱藏整個 block wrapper（<p>/<h1> 等），而非只隱藏 <img>
+      // 避免空 <p> 因 font-size:2em 仍有 ~54px line-height 撐高 textH
+      const wrappers = imgs.map(img => img.closest('p, h1, h2, h3, h4, h5, h6') || img);
+      wrappers.forEach(w => { w.style.display = 'none'; });
+
+      // el 是 flex-1，el.scrollHeight 在 overflow:hidden 時 = max(clientHeight, contentH)
+      // 改用內部 data-lh wrapper（普通 block 元素）量純文字高度才準確
+      const inner = el.querySelector('[data-lh]') || el.firstElementChild;
+      const textH = inner ? inner.scrollHeight : 0;
+
+      wrappers.forEach(w => { w.style.display = ''; });
+
+      // 扣除容器上下 padding（py-3 = 12px × 2）及緩衝，剩餘空間分配給圖片
+      const style = getComputedStyle(el);
+      const padV  = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const perImg = Math.max(40, Math.floor((containerH - padV - textH - 8) / imgs.length));
+
+      // 圖片填滿分配空間，等比縮放
+      imgs.forEach(img => {
+        img.style.width      = '100%';
+        img.style.height     = `${perImg}px`;
+        img.style.objectFit  = 'contain';
+      });
+    };
+
+    const ro = new ResizeObserver(adjust);
+    ro.observe(el);
+    adjust();
+    return () => ro.disconnect();
   }, [html]);
 
   return (
-    <div ref={wrapRef} className={className} style={{ ...style, overflow: 'hidden' }}>
-      <div ref={innerRef} dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
+    <div
+      ref={ref}
+      className="announcement-content flex-1 px-5 py-3 text-gray-700 min-h-0 overflow-hidden"
+      style={{ lineHeight }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+/** lh3.googleusercontent.com 圖片 URL 強制使用原始尺寸（=s0），修正舊公告的 =sNUM 縮圖 */
+function fixImageUrl(src) {
+  if (!src.includes('lh3.googleusercontent.com')) return src;
+  return src.replace(/=s\d+/, '=s0').replace(/(\/d\/[^=?]+)(?!=s)(\?|$)/, '$1=s0$2');
+}
+
+/** HTML 字串內所有 lh3 圖片 URL 套用 fixImageUrl */
+function fixHtmlImageUrls(html) {
+  return (html || '').replace(
+    /(<img[^>]+src=["'])(https:\/\/lh3\.googleusercontent\.com[^"']+)(["'])/gi,
+    (_, pre, url, post) => pre + fixImageUrl(url) + post
+  );
+}
+
+/** 移除首個字元為空或換行符號的行（h1/h2/p 元素），含圖片的段落保留 */
+function filterEmptyStartLines(html) {
+  return (html || '').replace(
+    /<(h[1-6]|p)([^>]*)>([\s\S]*?)<\/\1>/gi,
+    (match, _tag, _attrs, inner) => {
+      if (/<img/i.test(inner)) return match;
+      const text = inner.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+      if (text.trim() === '' || text[0] === '\n') return '';
+      return match;
+    }
   );
 }
 
@@ -77,11 +173,10 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
   const { department, label_color, content, end_date } = announcement;
   const remaining = daysLeft(end_date);
 
-  const cleanContent = stripEmptyLines(content || '');
-  const imageSrcs   = extractImageSrcs(cleanContent);
-  const textHtml    = stripImages(cleanContent);
+  const cleanContent = fixHtmlImageUrls(filterEmptyStartLines(stripEmptyLines(content || '')));
+  const imageSrcs   = extractImageSrcs(cleanContent).map(fixImageUrl);
   const hasImg      = imageSrcs.length > 0;
-  const hasTxt      = textHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
+  const hasTxt      = stripImages(cleanContent).replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
   const lineHeight  = extractLineHeight(content || '');
 
   return (
@@ -98,7 +193,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       {/* 頂部標籤列 */}
       <div className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-2">
         <span
-          className="inline-flex items-center gap-1 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm"
+          className="inline-flex items-center gap-1 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-sm"
           style={{ backgroundColor: label_color || '#2D5DA6' }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
@@ -116,35 +211,12 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       </div>
 
       {/* 內容區 */}
-      {hasImg && hasTxt ? (
-        /* 圖文並排：左文右圖 */
-        <div className="flex-1 flex gap-2 px-5 py-3 min-h-0 overflow-hidden">
-          <ScaledContent
-            html={textHtml}
-            className="announcement-content flex-1 text-gray-700 min-h-0"
-            style={{ lineHeight }}
-          />
-          <div className="flex-shrink-0 flex flex-col items-center justify-center gap-1 overflow-hidden"
-            style={{ width: '42%' }}>
-            {imageSrcs.map((src, i) => (
-              <img key={i} src={src} alt="公告圖片" className="w-full object-contain rounded-md" />
-            ))}
-          </div>
-        </div>
-      ) : hasImg ? (
-        /* 純圖片：置中等比縮放至框內 */
-        <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 py-3 min-h-0 overflow-hidden">
-          {imageSrcs.map((src, i) => (
-            <img key={i} src={src} alt="公告圖片" className="max-w-full max-h-full object-contain rounded-md" />
-          ))}
-        </div>
+      {hasImg && !hasTxt ? (
+        /* 純圖片：原始像素大小，超出則等比縮放 */
+        <PureImageDisplay imageSrcs={imageSrcs} />
       ) : (
-        /* 純文字 */
-        <ScaledContent
-          html={cleanContent}
-          className="announcement-content flex-1 px-5 py-3 text-gray-700 min-h-0"
-          style={{ lineHeight }}
-        />
+        /* 圖文混排 or 純文字 */
+        <TextImageContent html={cleanContent} lineHeight={lineHeight} />
       )}
     </motion.div>
   );

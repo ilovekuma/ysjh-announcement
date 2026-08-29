@@ -99,11 +99,13 @@
   list-style-type: decimal;
 }
 
-/* 圖片 */
+/* 圖片基礎樣式；width/height/objectFit 由 TextImageContent 動態覆寫 */
 .announcement-content img {
-  max-width: 100%;
+  display: block;
+  margin: 8px auto;
   border-radius: 4px;
-  margin: 8px 0;
+  max-width: 100%;
+  height: auto;
 }
 
 /* 連結 */

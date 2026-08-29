@@ -17,21 +17,24 @@ function applyLH(html, lh) {
 }
 
 const DEPARTMENTS = [
-  '教務處', '學務處', '總務處', '輔導室',
-  '體育組', '圖書館', '校長室', '其他',
+  { name: '教務處', color: '#2D5DA6' },
+  { name: '學務處', color: '#16a34a' },
+  { name: '總務處', color: '#C9A227' },
+  { name: '輔導室', color: '#7c3aed' },
+  { name: '體育組', color: '#dc2626' },
+  { name: '圖書館', color: '#0891b2' },
+  { name: '校長室', color: '#ea580c' },
+  { name: '其他',   color: '#be185d' },
 ];
 
-const DEFAULT_COLORS = [
-  '#2D5DA6', '#C9A227', '#16a34a', '#dc2626',
-  '#7c3aed', '#0891b2', '#ea580c', '#be185d',
-];
+const DEFAULT_COLORS = DEPARTMENTS.map(d => d.color);
 
 const EMPTY_FORM = {
   department:  '',
   label_color: '#2D5DA6',
   content:     '',
   start_date:  todayISO(),
-  end_date:    '',
+  end_date:    todayISO(),
 };
 
 /**
@@ -58,7 +61,13 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
     }
   }, [initial]);
 
-  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const set = (key) => (e) => setForm(f => {
+    const updated = { ...f, [key]: e.target.value };
+    if (key === 'start_date' && updated.end_date < updated.start_date) {
+      updated.end_date = updated.start_date;
+    }
+    return updated;
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -79,17 +88,18 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
       <div>
         <label className="block text-sm font-semibold text-school-navy mb-1">發布單位 *</label>
         <div className="flex flex-wrap gap-2">
-          {DEPARTMENTS.map(dep => (
+          {DEPARTMENTS.map(({ name, color }) => (
             <button
-              key={dep}
+              key={name}
               type="button"
-              onClick={() => setForm(f => ({ ...f, department: dep }))}
+              onClick={() => setForm(f => ({ ...f, department: name, label_color: color }))}
               className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors
-                ${form.department === dep
-                  ? 'bg-school-blue text-white border-school-blue'
+                ${form.department === name
+                  ? 'text-white border-transparent'
                   : 'bg-white text-school-navy border-gray-300 hover:border-school-blue'}`}
+              style={form.department === name ? { backgroundColor: color, borderColor: color } : {}}
             >
-              {dep}
+              {name}
             </button>
           ))}
         </div>
