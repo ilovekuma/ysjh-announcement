@@ -65,35 +65,52 @@ function TextImageContent({ html, lineHeight }) {
     if (!el) return;
 
     const adjust = () => {
-      const imgs = Array.from(el.querySelectorAll('img'));
-      if (imgs.length === 0) return;
-
       const containerH = el.clientHeight;
       if (containerH === 0) return;
 
-      // 隱藏整個 block wrapper（<p>/<h1> 等），而非只隱藏 <img>
-      // 避免空 <p> 因 font-size:2em 仍有 ~54px line-height 撐高 textH
-      const wrappers = imgs.map(img => img.closest('p, h1, h2, h3, h4, h5, h6') || img);
-      wrappers.forEach(w => { w.style.display = 'none'; });
-
-      // el 是 flex-1，el.scrollHeight 在 overflow:hidden 時 = max(clientHeight, contentH)
-      // 改用內部 data-lh wrapper（普通 block 元素）量純文字高度才準確
       const inner = el.querySelector('[data-lh]') || el.firstElementChild;
-      const textH = inner ? inner.scrollHeight : 0;
+      if (!inner) return;
 
-      wrappers.forEach(w => { w.style.display = ''; });
+      // 先還原縮放，量測原始（未縮放）尺寸
+      inner.style.transform = '';
+      inner.style.width     = '';
 
-      // 扣除容器上下 padding（py-3 = 12px × 2）及緩衝，剩餘空間分配給圖片
+      const imgs = Array.from(el.querySelectorAll('img'));
       const style = getComputedStyle(el);
       const padV  = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-      const perImg = Math.max(40, Math.floor((containerH - padV - textH - 8) / imgs.length));
 
-      // 圖片填滿分配空間，等比縮放
-      imgs.forEach(img => {
-        img.style.width      = '100%';
-        img.style.height     = `${perImg}px`;
-        img.style.objectFit  = 'contain';
-      });
+      if (imgs.length > 0) {
+        // 隱藏整個 block wrapper（<p>/<h1> 等），而非只隱藏 <img>
+        // 避免空 <p> 因 font-size:2em 仍有 ~54px line-height 撐高 textH
+        const wrappers = imgs.map(img => img.closest('p, h1, h2, h3, h4, h5, h6') || img);
+        wrappers.forEach(w => { w.style.display = 'none'; });
+
+        // el 是 flex-1，el.scrollHeight 在 overflow:hidden 時 = max(clientHeight, contentH)
+        // 改用內部 data-lh wrapper（普通 block 元素）量純文字高度才準確
+        const textH = inner.scrollHeight;
+
+        wrappers.forEach(w => { w.style.display = ''; });
+
+        // 扣除容器上下 padding 及緩衝，剩餘空間分配給圖片
+        const perImg = Math.max(40, Math.floor((containerH - padV - textH - 8) / imgs.length));
+
+        // 圖片填滿分配空間，等比縮放
+        imgs.forEach(img => {
+          img.style.width      = '100%';
+          img.style.height     = `${perImg}px`;
+          img.style.objectFit  = 'contain';
+        });
+      }
+
+      // 文字（含已定尺寸的圖片）若仍超出容器可用高度，整體等比縮小，避免裁切
+      const availH   = containerH - padV;
+      const contentH = inner.scrollHeight;
+      if (availH > 0 && contentH > availH) {
+        const scale = availH / contentH;
+        inner.style.transform       = `scale(${scale})`;
+        inner.style.transformOrigin = 'top left';
+        inner.style.width           = `${100 / scale}%`;
+      }
     };
 
     const ro = new ResizeObserver(adjust);
