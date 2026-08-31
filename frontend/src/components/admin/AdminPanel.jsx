@@ -187,6 +187,18 @@ export default function AdminPanel({ open, onClose, announcements, allAnnounceme
                       <h2 className="text-base font-bold text-school-navy mb-3">
                         {editTarget ? '✏️ 編輯公告' : '➕ 新增公告'}
                       </h2>
+
+                      {/* 大屏呈現注意事項 */}
+                      <div className="mb-4 px-3.5 py-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                        <p className="font-semibold mb-1">💡 輸出公告後請檢查呈現狀態：</p>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          <li>最多五行字體較大清晰，超過建議拆分內容為兩張卡片</li>
+                          <li>若內容太多、字太小，學生會看不清楚</li>
+                          <li>圖片可自成完整一頁輸出</li>
+                          <li>公告最多 20 則，超過 20 則無法完整播放一輪</li>
+                        </ul>
+                      </div>
+
                       <AnnouncementForm
                         initial={editTarget}
                         onSubmit={handleSubmit}
