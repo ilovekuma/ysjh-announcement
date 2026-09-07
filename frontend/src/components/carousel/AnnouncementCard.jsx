@@ -8,6 +8,9 @@ function extractLineHeight(html) {
   return m ? m[1] : '1.8';
 }
 
+/** 縮放下限：內容過長時寧可裁切也不再繼續縮小字級，避免文字小到難以辨識 */
+const MIN_SCALE = 0.65;
+
 /**
  * 純圖片顯示：ResizeObserver 量出容器實際 px 尺寸後，
  * 用 object-fit: contain 填滿可用空間（等比縮放，不裁切）。
@@ -106,7 +109,7 @@ function TextImageContent({ html, lineHeight }) {
       const availH   = containerH - padV;
       const contentH = inner.scrollHeight;
       if (availH > 0 && contentH > availH) {
-        const scale = availH / contentH;
+        const scale = Math.max(MIN_SCALE, availH / contentH);
         inner.style.transform       = `scale(${scale})`;
         inner.style.transformOrigin = 'top left';
         inner.style.width           = `${100 / scale}%`;
