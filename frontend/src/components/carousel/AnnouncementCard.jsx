@@ -1,15 +1,7 @@
 import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { daysLeft } from '../../utils/dateUtils';
-
-/** 從 HTML wrapper div 的 data-lh 屬性取出行高值 */
-function extractLineHeight(html) {
-  const m = (html || '').match(/data-lh="([^"]*)"/);
-  return m ? m[1] : '1.8';
-}
-
-/** 縮放下限：內容過長時寧可裁切也不再繼續縮小字級，避免文字小到難以辨識 */
-const MIN_SCALE = 0.65;
+import { cleanAnnouncementHtml, classifyContent, extractLineHeight } from '../../utils/announcementContent';
 
 /**
  * 純圖片顯示：ResizeObserver 量出容器實際 px 尺寸後，
@@ -56,9 +48,9 @@ function PureImageDisplay({ imageSrcs }) {
 
 /**
  * 圖文混排 / 純文字內容
- * - useLayoutEffect（繪製前執行）+ 直接操作 img DOM 樣式，無閃爍
- * - 暫時隱藏圖片量測純文字高度，剩餘高度等分給每張圖
- * - 圖片設為 width:100% / height:perImg / objectFit:contain，填滿並等比縮放
+ * - 字級固定為標題1大小（見 index.css .announcement-content），不再自動縮放
+ * - 內容超出卡片版位時，交由 overflow:hidden 直接裁切（版位大小已由 usePagedLayout 事先估算）
+ * - 圖片：暫時隱藏量測純文字高度，剩餘高度等分給每張圖，等比縮放
  */
 function TextImageContent({ html, lineHeight }) {
   const ref = useRef(null);
@@ -74,46 +66,32 @@ function TextImageContent({ html, lineHeight }) {
       const inner = el.querySelector('[data-lh]') || el.firstElementChild;
       if (!inner) return;
 
-      // 先還原縮放，量測原始（未縮放）尺寸
-      inner.style.transform = '';
-      inner.style.width     = '';
-
       const imgs = Array.from(el.querySelectorAll('img'));
+      if (imgs.length === 0) return;
+
       const style = getComputedStyle(el);
       const padV  = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
 
-      if (imgs.length > 0) {
-        // 隱藏整個 block wrapper（<p>/<h1> 等），而非只隱藏 <img>
-        // 避免空 <p> 因 font-size:2em 仍有 ~54px line-height 撐高 textH
-        const wrappers = imgs.map(img => img.closest('p, h1, h2, h3, h4, h5, h6') || img);
-        wrappers.forEach(w => { w.style.display = 'none'; });
+      // 隱藏整個 block wrapper（<p>/<h1> 等），而非只隱藏 <img>
+      // 避免空 <p> 因 font-size:2em 仍有 ~54px line-height 撐高 textH
+      const wrappers = imgs.map(img => img.closest('p, h1, h2, h3, h4, h5, h6') || img);
+      wrappers.forEach(w => { w.style.display = 'none'; });
 
-        // el 是 flex-1，el.scrollHeight 在 overflow:hidden 時 = max(clientHeight, contentH)
-        // 改用內部 data-lh wrapper（普通 block 元素）量純文字高度才準確
-        const textH = inner.scrollHeight;
+      // el 是 flex-1，el.scrollHeight 在 overflow:hidden 時 = max(clientHeight, contentH)
+      // 改用內部 data-lh wrapper（普通 block 元素）量純文字高度才準確
+      const textH = inner.scrollHeight;
 
-        wrappers.forEach(w => { w.style.display = ''; });
+      wrappers.forEach(w => { w.style.display = ''; });
 
-        // 扣除容器上下 padding 及緩衝，剩餘空間分配給圖片
-        const perImg = Math.max(40, Math.floor((containerH - padV - textH - 8) / imgs.length));
+      // 扣除容器上下 padding 及緩衝，剩餘空間分配給圖片
+      const perImg = Math.max(40, Math.floor((containerH - padV - textH - 8) / imgs.length));
 
-        // 圖片填滿分配空間，等比縮放
-        imgs.forEach(img => {
-          img.style.width      = '100%';
-          img.style.height     = `${perImg}px`;
-          img.style.objectFit  = 'contain';
-        });
-      }
-
-      // 文字（含已定尺寸的圖片）若仍超出容器可用高度，整體等比縮小，避免裁切
-      const availH   = containerH - padV;
-      const contentH = inner.scrollHeight;
-      if (availH > 0 && contentH > availH) {
-        const scale = Math.max(MIN_SCALE, availH / contentH);
-        inner.style.transform       = `scale(${scale})`;
-        inner.style.transformOrigin = 'top left';
-        inner.style.width           = `${100 / scale}%`;
-      }
+      // 圖片填滿分配空間，等比縮放
+      imgs.forEach(img => {
+        img.style.width      = '100%';
+        img.style.height     = `${perImg}px`;
+        img.style.objectFit  = 'contain';
+      });
     };
 
     const ro = new ResizeObserver(adjust);
@@ -132,71 +110,18 @@ function TextImageContent({ html, lineHeight }) {
   );
 }
 
-/** lh3.googleusercontent.com 圖片 URL 強制使用原始尺寸（=s0），修正舊公告的 =sNUM 縮圖 */
-function fixImageUrl(src) {
-  if (!src.includes('lh3.googleusercontent.com')) return src;
-  return src.replace(/=s\d+/, '=s0').replace(/(\/d\/[^=?]+)(?!=s)(\?|$)/, '$1=s0$2');
-}
-
-/** HTML 字串內所有 lh3 圖片 URL 套用 fixImageUrl */
-function fixHtmlImageUrls(html) {
-  return (html || '').replace(
-    /(<img[^>]+src=["'])(https:\/\/lh3\.googleusercontent\.com[^"']+)(["'])/gi,
-    (_, pre, url, post) => pre + fixImageUrl(url) + post
-  );
-}
-
-/** 移除首個字元為空或換行符號的行（h1/h2/p 元素），含圖片的段落保留 */
-function filterEmptyStartLines(html) {
-  return (html || '').replace(
-    /<(h[1-6]|p)([^>]*)>([\s\S]*?)<\/\1>/gi,
-    (match, _tag, _attrs, inner) => {
-      if (/<img/i.test(inner)) return match;
-      const text = inner.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-      if (text.trim() === '' || text[0] === '\n') return '';
-      return match;
-    }
-  );
-}
-
-/** 從 HTML 中提取所有 img src */
-function extractImageSrcs(html) {
-  const srcs = [];
-  const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
-  let match;
-  while ((match = regex.exec(html)) !== null) {
-    srcs.push(match[1]);
-  }
-  return srcs;
-}
-
-/** 移除所有 img 標籤及其產生的空段落 */
-function stripImages(html) {
-  return (html || '')
-    .replace(/<img[^>]*>/gi, '')
-    .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '');
-}
-
-/** 移除空行（空段落、只有 br 的段落） */
-function stripEmptyLines(html) {
-  return (html || '')
-    .replace(/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '');
-}
-
 /**
  * AnnouncementCard — 單張公告卡片
- * 若含圖片且含文字：左欄文字 / 右欄圖片
+ * 若含圖片且含文字：文字與圖片依序排列
  * 若僅含圖片：單欄圖片
- * 若僅含文字：單欄文字（原本行為）
+ * 若僅含文字：單欄文字（固定標題1字級，超出裁切）
  */
-export default function AnnouncementCard({ announcement, isActive = false, onClick, onDoubleClick }) {
+export default function AnnouncementCard({ announcement, isActive = false, onClick, onDoubleClick, style }) {
   const { department, label_color, content, end_date } = announcement;
   const remaining = daysLeft(end_date);
 
-  const cleanContent = fixHtmlImageUrls(filterEmptyStartLines(stripEmptyLines(content || '')));
-  const imageSrcs   = extractImageSrcs(cleanContent).map(fixImageUrl);
-  const hasImg      = imageSrcs.length > 0;
-  const hasTxt      = stripImages(cleanContent).replace(/<[^>]*>/g, '').replace(/\s+/g, '').length > 0;
+  const cleanContent = cleanAnnouncementHtml(content || '');
+  const { imageSrcs, hasImg, hasTxt } = classifyContent(cleanContent);
   const lineHeight  = extractLineHeight(content || '');
 
   return (
@@ -205,6 +130,7 @@ export default function AnnouncementCard({ announcement, isActive = false, onCli
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      style={style}
       className={`bg-white rounded-2xl shadow-lg overflow-hidden border flex flex-col h-full
         ${isActive ? 'border-school-blue/40 shadow-school-blue/20 shadow-xl' : 'border-gray-200'}
         ${onClick ? 'cursor-pointer hover:shadow-xl transition-shadow' : ''}

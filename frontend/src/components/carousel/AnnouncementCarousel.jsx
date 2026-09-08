@@ -1,54 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import AnnouncementCard from './AnnouncementCard';
 import { useCarousel } from '../../hooks/useCarousel';
-
-const CARDS_PER_PAGE = 4;
-const IMAGE_PAGE_MS  = 10000;
-const MIN_MS = 8000;
-const MAX_MS = 30000;
-const CHARS_PER_SEC = 5;
-
-function hasImage(ann) {
-  return /<img/i.test(ann.content || '');
-}
-
-/** 含圖公告獨佔一頁（全版），純文字公告 4 張一組 */
-function buildPages(announcements) {
-  const pages = [];
-  let textGroup = [];
-
-  for (const ann of announcements) {
-    if (hasImage(ann)) {
-      if (textGroup.length > 0) {
-        for (let i = 0; i < textGroup.length; i += CARDS_PER_PAGE) {
-          pages.push({ type: 'text', cards: textGroup.slice(i, i + CARDS_PER_PAGE) });
-        }
-        textGroup = [];
-      }
-      pages.push({ type: 'image', cards: [ann] });
-    } else {
-      textGroup.push(ann);
-    }
-  }
-
-  if (textGroup.length > 0) {
-    for (let i = 0; i < textGroup.length; i += CARDS_PER_PAGE) {
-      pages.push({ type: 'text', cards: textGroup.slice(i, i + CARDS_PER_PAGE) });
-    }
-  }
-
-  return pages.length > 0 ? pages : [{ type: 'text', cards: [] }];
-}
-
-function calcPageInterval(cards) {
-  const chars = cards.reduce((sum, ann) => {
-    const text = (ann.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
-    return sum + text.length;
-  }, 0);
-  const ms = Math.round((chars / CHARS_PER_SEC) * 1000);
-  return Math.min(MAX_MS, Math.max(MIN_MS, ms));
-}
+import { usePagedLayout, CARD_INTERVAL_MS } from '../../hooks/usePagedLayout';
 
 // 垂直換頁動畫
 const PAGE_VARIANTS = {
@@ -58,17 +12,18 @@ const PAGE_VARIANTS = {
 };
 
 /**
- * AnnouncementCarousel — 固定 2×2 網格，15 秒自動換頁，支援垂直拖曳
- * 卡片字型大小由 AnnouncementCard 依內容長度自動縮放
+ * AnnouncementCarousel — 2×2 版位，卡片依內容自然高度動態決定佔用 1/4、1/2 或整頁，
+ * 由第一頁開始往後找空位放置（first-fit），放不下才開新頁。
+ * 每張卡片固定播放 10 秒，一頁停留時間 = 該頁卡片數 × 10 秒。
+ * 卡片字型大小固定為標題1，內容超出版位時直接裁切（不再自動縮放）。
  */
 export default function AnnouncementCarousel({ announcements, loading, onCardDoubleClick, onNavInfo }) {
   const count = announcements.length;
-  const pages = buildPages(announcements);
+  const gridRef = useRef(null);
+  const pages = usePagedLayout(announcements, gridRef);
   const pageCount = pages.length;
 
-  const intervals = pages.map(p =>
-    p.type === 'image' ? IMAGE_PAGE_MS : calcPageInterval(p.cards)
-  );
+  const intervals = pages.map(p => p.cardCount * CARD_INTERVAL_MS);
 
   const {
     current: page,
@@ -82,7 +37,7 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
     resumeCarousel,
   } = useCarousel(pageCount, intervals);
 
-  const currentPage = pages[page] ?? { type: 'text', cards: [] };
+  const currentPage = pages[page] ?? { cards: [] };
 
   // 通知父層目前導覽狀態，讓 Header 顯示
   useEffect(() => {
@@ -129,9 +84,10 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
         </div>
       </div>
 
-      {/* ── 桌面版：2×2 網格自動輪播（導覽已移至頂部 Header）── */}
+      {/* ── 桌面版：2×2 版位自動輪播（導覽已移至頂部 Header）── */}
       <div className="hidden md:block h-full">
         <div
+          ref={gridRef}
           className="relative w-full h-full overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
@@ -145,29 +101,17 @@ export default function AnnouncementCarousel({ announcements, loading, onCardDou
               initial="enter"
               animate="center"
               exit="exit"
-              className={`absolute inset-0 p-0 ${
-                currentPage.type === 'image'
-                  ? ''
-                  : 'grid grid-cols-2 grid-rows-2 gap-2'
-              }`}
+              className="absolute inset-0 p-0 grid grid-cols-2 grid-rows-2 gap-2"
             >
-              {currentPage.type === 'image' ? (
+              {currentPage.cards.map(({ ann, gridColumn, gridRow }) => (
                 <AnnouncementCard
-                  key={currentPage.cards[0].id}
-                  announcement={currentPage.cards[0]}
+                  key={ann.id}
+                  announcement={ann}
                   isActive
-                  onDoubleClick={() => onCardDoubleClick?.(currentPage.cards[0])}
+                  style={{ gridColumn, gridRow }}
+                  onDoubleClick={() => onCardDoubleClick?.(ann)}
                 />
-              ) : (
-                currentPage.cards.map((ann) => (
-                  <AnnouncementCard
-                    key={ann.id}
-                    announcement={ann}
-                    isActive
-                    onDoubleClick={() => onCardDoubleClick?.(ann)}
-                  />
-                ))
-              )}
+              ))}
             </motion.div>
           </AnimatePresence>
         </div>

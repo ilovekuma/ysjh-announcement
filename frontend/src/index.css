@@ -53,8 +53,11 @@
    以下規則對應 Quill Snow 在 .ql-editor 內的預設樣式。
    ================================================================ */
 
-/* 所有文字元素一律以 H1 大小輸出，超出自動換行 */
+/* 所有文字元素一律以 H1 大小輸出（含未加標籤的舊資料，靠繼承套用），超出自動換行 */
 .announcement-content {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.3;
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -63,10 +66,8 @@
 .announcement-content h2,
 .announcement-content h3,
 .announcement-content p,
-.announcement-content li {
-  font-size: 2em;
-  font-weight: 700;
-  line-height: 1.3;
+.announcement-content li,
+.announcement-content div {
   margin-bottom: 0.4em;
 }
 

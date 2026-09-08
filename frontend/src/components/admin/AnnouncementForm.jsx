@@ -29,57 +29,6 @@ const DEPARTMENTS = [
 
 const DEFAULT_COLORS = DEPARTMENTS.map(d => d.color);
 
-/**
- * 卡片內容字數上限（全形字，去除 HTML 標籤後計算）。
- * 原先依理論版面尺寸估算為 180 字，經實機測試後改為 110 字（現場實測值優先於估算值）。
- */
-const MAX_CONTENT_CHARS = 110;
-
-/**
- * 卡片內容行數上限。即使總字數沒超過，若使用者手動分段（Enter 換行）造成
- * 行數過多，卡片高度固定的情況下一樣會被壓縮或裁切，因此另外用實際渲染
- * 行數把關，而非只看字數。
- */
-const MAX_CONTENT_LINES = 6;
-
-/** 供行數量測用的隱藏容器寬度，對應卡片內文實際可用寬度（86 吋 4K、2×2 版面下的估算值） */
-const CARD_CONTENT_WIDTH = 1874;
-
-/** 取出去除 HTML 標籤後的純文字長度，用於字數上限判斷 */
-function getPlainTextLength(html) {
-  return (html || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '').length;
-}
-
-/**
- * 將內容渲染進隱藏容器（套用與卡片相同的 .announcement-content 樣式），
- * 依每個文字區塊實際高度 / 行高計算出渲染後的總行數，藉此抓出「字不多但
- * 換行太多」的情況。含圖片的區塊不計入行數。
- */
-function countRenderedLines(html) {
-  if (typeof document === 'undefined' || !html) return 0;
-
-  const container = document.createElement('div');
-  container.className = 'announcement-content';
-  container.style.cssText =
-    `position:fixed; left:-9999px; top:0; width:${CARD_CONTENT_WIDTH}px; visibility:hidden; pointer-events:none;`;
-  container.innerHTML = html;
-  document.body.appendChild(container);
-
-  let lines = 0;
-  container.querySelectorAll('h1, h2, h3, p, li').forEach((block) => {
-    if (block.querySelector('img')) return;
-    const text = block.textContent.replace(/\s+/g, '');
-    if (!text) return;
-    const fontSize = parseFloat(getComputedStyle(block).fontSize) || 32;
-    const lineHeightPx = fontSize * 1.3; // 對應 index.css .announcement-content 內文 line-height: 1.3
-    const height = block.getBoundingClientRect().height;
-    lines += Math.max(1, Math.round(height / lineHeightPx));
-  });
-
-  document.body.removeChild(container);
-  return lines;
-}
-
 const EMPTY_FORM = {
   department:  '',
   label_color: '#2D5DA6',
@@ -94,17 +43,6 @@ const EMPTY_FORM = {
 export default function AnnouncementForm({ initial, onSubmit, onCancel, submitting }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [lineHeight, setLineHeight] = useState('1.8');
-  const [lineCount, setLineCount] = useState(0);
-
-  const contentLength = getPlainTextLength(form.content);
-  const overChars = contentLength > MAX_CONTENT_CHARS;
-  const overLines = lineCount > MAX_CONTENT_LINES;
-  const overLimit = overChars || overLines;
-
-  // 內容變更時重新量測渲染行數
-  useEffect(() => {
-    setLineCount(countRenderedLines(form.content));
-  }, [form.content]);
 
   // 載入編輯目標
   useEffect(() => {
@@ -139,8 +77,6 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
     const textOnly = (form.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, '');
     const hasImg   = /<img/i.test(form.content || '');
     if (!hasImg && textOnly.length === 0) { alert('請填寫公告內容或上傳圖片'); return; }
-    if (overChars) { alert('字數超過卡片上限，請改編輯 16:9 圖片送出上傳，可完整一頁呈現'); return; }
-    if (overLines) { alert('內容超過 6 行，卡片高度顯示不下，請精簡文字或改編輯 16:9 圖片送出上傳，可完整一頁呈現'); return; }
     // 移除空行後再包裝行高
     const cleaned = (form.content || '').replace(/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '');
     onSubmit({ ...form, content: applyLH(cleaned, lineHeight) });
@@ -241,24 +177,6 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
           onChange={(html) => setForm(f => ({ ...f, content: html }))}
           onLineHeightChange={setLineHeight}
         />
-        <div className="mt-1 flex items-center justify-end gap-3 text-xs">
-          <span className={overChars ? 'text-red-600 font-semibold' : 'text-gray-400'}>
-            {contentLength} / {MAX_CONTENT_CHARS} 字
-          </span>
-          <span className={overLines ? 'text-red-600 font-semibold' : 'text-gray-400'}>
-            {lineCount} / {MAX_CONTENT_LINES} 行
-          </span>
-        </div>
-        {overChars && (
-          <p className="mt-1 text-xs text-red-600">
-            字數超過卡片上限，請改編輯 16:9 圖片送出上傳，可完整一頁呈現
-          </p>
-        )}
-        {overLines && (
-          <p className="mt-1 text-xs text-red-600">
-            內容超過 6 行，卡片高度顯示不下，請精簡文字或改編輯 16:9 圖片送出上傳，可完整一頁呈現
-          </p>
-        )}
       </div>
 
       {/* 按鈕列 */}
@@ -274,7 +192,7 @@ export default function AnnouncementForm({ initial, onSubmit, onCancel, submitti
         </button>
         <button
           type="submit"
-          disabled={submitting || overLimit}
+          disabled={submitting}
           className="flex-1 py-2.5 rounded-lg bg-school-blue text-white
                      hover:bg-school-navy text-sm font-semibold transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
